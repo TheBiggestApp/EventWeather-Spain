@@ -14,7 +14,7 @@ public class SyncTask implements Runnable {
     @Override
     public void run() {
         try {
-            synchronizeCity("Vigo");
+            synchronizeCity("Madrid");
         } catch (Exception e) {
             System.err.println("Fallo en la sincronización: " + e.getMessage());
         }
