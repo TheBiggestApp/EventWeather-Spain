@@ -8,6 +8,7 @@ public class Evento {
     private final double longitud;
     private double temperatura;
     private String climaDescripcion;
+    private String hora;
 
     public Evento(String id, String nombre, String fecha, double latitud, double longitud) {
         this.id = id;
@@ -24,7 +25,10 @@ public class Evento {
     public double getLongitud() { return longitud; }
     public double getTemperatura() { return temperatura; }
     public String getClimaDescripcion() { return climaDescripcion; }
+    public String getHora() { return hora; }
 
     public void setTemperatura(double temperatura) { this.temperatura = temperatura; }
     public void setClimaDescripcion(String desc) { this.climaDescripcion = desc; }
+
+    public void setHora(String hora) { this.hora = hora; }
 }
