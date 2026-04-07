@@ -9,7 +9,7 @@ public class Config {
 
     static {
         // Usamos un File para ver exactamente dónde está buscando
-        File file = new File("config.properties");
+        File file = new File("thebiggestapp/src/main/resources/config.properties");
         try (FileInputStream f = new FileInputStream(file)) {
             props.load(f);
         } catch (Exception e) {

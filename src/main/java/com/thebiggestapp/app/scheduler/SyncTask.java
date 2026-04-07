@@ -13,10 +13,15 @@ public class SyncTask implements Runnable {
 
     @Override
     public void run() {
-        try {
-            synchronizeCity("Madrid");
-        } catch (Exception e) {
-            System.err.println("Fallo en la sincronización: " + e.getMessage());
+
+        String[] ciudades = {"Barcelona", "Madrid", "Valencia"};
+
+        for (String ciudad : ciudades) {
+            try {
+                synchronizeCity(ciudad);
+            } catch (Exception e) {
+                System.err.println("Fallo en la sincronización de " + ciudad + ": " + e.getMessage());
+            }
         }
     }
 
