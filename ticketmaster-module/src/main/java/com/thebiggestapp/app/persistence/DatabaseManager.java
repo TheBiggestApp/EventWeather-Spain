@@ -21,7 +21,7 @@ public class DatabaseManager {
     }
 
     private void createTableAndMigrate() {
-        // SQL con la nueva columna 'hora'
+        // SQL SIN las columnas de clima
         String createTableSql = "CREATE TABLE IF NOT EXISTS eventos (" +
                 "id TEXT PRIMARY KEY, " +
                 "nombre TEXT, " +
@@ -29,24 +29,18 @@ public class DatabaseManager {
                 "hora TEXT, " +
                 "latitud REAL, " +
                 "longitud REAL, " +
-                "temperatura REAL, " +
-                "clima TEXT, " +
                 "ciudad TEXT)";
 
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createTableSql);
-
-            try {
-                stmt.execute("ALTER TABLE eventos ADD COLUMN hora TEXT");
-            } catch (SQLException e) {
-            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     public void guardar(Evento evento, String ciudad) {
-        String sql = "INSERT OR REPLACE INTO eventos VALUES(?,?,?,?,?,?,?,?,?)";
+        // Ahora son 7 columnas en lugar de 9
+        String sql = "INSERT OR REPLACE INTO eventos VALUES(?,?,?,?,?,?,?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, evento.getId());
@@ -55,9 +49,7 @@ public class DatabaseManager {
             pstmt.setString(4, evento.getHora());
             pstmt.setDouble(5, evento.getLatitud());
             pstmt.setDouble(6, evento.getLongitud());
-            pstmt.setDouble(7, evento.getTemperatura());
-            pstmt.setString(8, evento.getClimaDescripcion());
-            pstmt.setString(9, ciudad);
+            pstmt.setString(7, ciudad);
 
             pstmt.executeUpdate();
         } catch (SQLException e) {

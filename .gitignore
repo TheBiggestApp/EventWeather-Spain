@@ -37,4 +37,4 @@ build/
 ### Mac OS ###
 .DS_Store
 .idea/
-src/main/resources/config.properties
+src_viejo/main/resources/config.properties

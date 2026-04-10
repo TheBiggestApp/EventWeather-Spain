@@ -1,32 +1,30 @@
 package com.thebiggestapp.app.scheduler;
 
-import com.thebiggestapp.app.model.*;
-import com.thebiggestapp.app.services.*;
+import com.thebiggestapp.app.model.Evento;
+import com.thebiggestapp.app.services.TicketmasterService;
 import com.thebiggestapp.app.persistence.DatabaseManager;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
-public class SyncTask implements Runnable {
+public class TicketmasterController implements Runnable {
     private final TicketmasterService ticketmaster = new TicketmasterService();
-    private final OpenWeatherService weather = new OpenWeatherService();
     private final DatabaseManager database = new DatabaseManager();
 
     @Override
     public void run() {
-
-        String[] ciudades = {"Barcelona", "Madrid", "Valencia"};
+        String[] ciudades = {"Barcelona", "Madrid", "Valencia", "Sevilla", "Zaragoza", "Murcia", "Palma de Mallorca", "Las Palmas", "Bilbao", "Alicante", "Cordoba", "Valladolid", "Vigo", "Gijon"};
 
         for (String ciudad : ciudades) {
             try {
                 synchronizeCity(ciudad);
             } catch (Exception e) {
-                System.err.println("Fallo en la sincronización de " + ciudad + ": " + e.getMessage());
+                System.err.println("Fallo en la sincronización de eventos de " + ciudad + ": " + e.getMessage());
             }
         }
     }
 
     private void synchronizeCity(String city) throws Exception {
-        System.out.println("Sincronizando ciudad: " + city);
+        System.out.println("Buscando eventos en: " + city);
         JsonArray events = ticketmaster.getEventsArray(ticketmaster.fetchEventsJson(city));
 
         for (JsonElement element : events) {
@@ -37,7 +35,6 @@ public class SyncTask implements Runnable {
     private void processEvent(com.google.gson.JsonObject json, String city) {
         try {
             Evento evento = ticketmaster.parseToEvento(json);
-            enrichWithWeather(evento);
             database.guardar(evento, city);
             printSummary(evento, city);
         } catch (Exception e) {
@@ -45,15 +42,8 @@ public class SyncTask implements Runnable {
         }
     }
 
-    private void enrichWithWeather(Evento evento) throws Exception {
-        Clima clima = weather.getClima(evento.getLatitud(), evento.getLongitud());
-        evento.setTemperatura(clima.getTemp());
-        evento.setClimaDescripcion(clima.getDesc());
-    }
-
     private void printSummary(Evento e, String city) {
-        // Hemos añadido e.getHora() al formato
-        System.out.printf("[%s] %s a las %s | %s -> %.2f°C, %s%n",
-                city, e.getFecha(), e.getHora(), e.getNombre(), e.getTemperatura(), e.getClimaDescripcion());
+        System.out.printf("[%s] %s a las %s | %s%n",
+                city, e.getFecha(), e.getHora(), e.getNombre());
     }
 }

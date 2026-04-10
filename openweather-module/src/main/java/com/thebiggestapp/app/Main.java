@@ -1,12 +1,12 @@
 package com.thebiggestapp.app;
 
-import com.thebiggestapp.app.scheduler.SyncTask;
+import com.thebiggestapp.app.scheduler.WeatherController;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("--- PROGRAMA INICIADO ---");
+        System.out.println("--- INICIANDO OPENWEATHER MODULE ---");
         try {
-            SyncTask task = new SyncTask();
+            WeatherController task = new WeatherController();
             task.run();
         } catch (Exception e) {
             e.printStackTrace();

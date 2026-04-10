@@ -1,19 +1,20 @@
 package com.thebiggestapp.app.config;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.Properties;
 
 public class Config {
     private static final Properties props = new Properties();
 
     static {
-        // Usamos un File para ver exactamente dónde está buscando
-        File file = new File("thebiggestapp/src/main/resources/config.properties");
-        try (FileInputStream f = new FileInputStream(file)) {
-            props.load(f);
+        try (InputStream input = Config.class.getClassLoader().getResourceAsStream("config.properties")) {
+            if (input == null) {
+                System.err.println("ERROR: No se encuentra config.properties en la carpeta resources del módulo.");
+            } else {
+                props.load(input);
+            }
         } catch (Exception e) {
-            System.err.println("ERROR: No se encuentra el archivo en: " + file.getAbsolutePath());
+            System.err.println("ERROR al cargar config.properties: " + e.getMessage());
         }
     }
 
