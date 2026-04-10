@@ -9,7 +9,6 @@ public class OpenWeatherService {
     private final OkHttpClient client = new OkHttpClient();
     private final String key = Config.get("OPENWEATHER_KEY");
 
-    // Ahora buscamos por ciudad en vez de lat/lon
     public Clima getClimaPorCiudad(String ciudad) throws Exception {
         String url = "https://api.openweathermap.org/data/2.5/weather?q=" + ciudad + ",ES&appid=" + key + "&units=metric&lang=es";
         Request req = new Request.Builder().url(url).build();

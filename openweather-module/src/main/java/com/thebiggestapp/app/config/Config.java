@@ -7,7 +7,6 @@ public class Config {
     private static final Properties props = new Properties();
 
     static {
-        // Usamos el ClassLoader para buscar el archivo en la carpeta 'resources' del módulo actual
         try (InputStream input = Config.class.getClassLoader().getResourceAsStream("config.properties")) {
             if (input == null) {
                 System.err.println("ERROR: No se encuentra config.properties en el módulo OpenWeather.");

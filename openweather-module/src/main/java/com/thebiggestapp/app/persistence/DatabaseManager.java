@@ -21,7 +21,6 @@ public class DatabaseManager {
     }
 
     private void createTableAndMigrate() {
-        // Creamos una tabla específica para el clima
         String createTableSql = "CREATE TABLE IF NOT EXISTS clima (" +
                 "ciudad TEXT PRIMARY KEY, " +
                 "temperatura REAL, " +

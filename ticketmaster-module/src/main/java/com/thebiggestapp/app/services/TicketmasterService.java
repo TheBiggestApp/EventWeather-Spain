@@ -27,11 +27,9 @@ public class TicketmasterService {
         String id = jsonObject.get("id").getAsString();
         String name = jsonObject.get("name").getAsString();
 
-        // Accedemos al objeto start para sacar fecha y hora
         JsonObject start = jsonObject.getAsJsonObject("dates").getAsJsonObject("start");
         String date = start.get("localDate").getAsString();
 
-        // Extraemos la hora (con un "null check" por si algún evento no tiene hora definida)
         String time = start.has("localTime") ? start.get("localTime").getAsString() : "00:00:00";
 
         JsonObject venue = jsonObject.getAsJsonObject("_embedded").getAsJsonArray("venues").get(0).getAsJsonObject();
@@ -40,7 +38,7 @@ public class TicketmasterService {
         double lon = location.get("longitude").getAsDouble();
 
         Evento evento = new Evento(id, name, date, lat, lon);
-        evento.setHora(time); // Guardamos la hora en el objeto
+        evento.setHora(time);
         return evento;
     }
 }

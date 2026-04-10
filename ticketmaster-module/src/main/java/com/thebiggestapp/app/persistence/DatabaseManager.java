@@ -21,7 +21,6 @@ public class DatabaseManager {
     }
 
     private void createTableAndMigrate() {
-        // SQL SIN las columnas de clima
         String createTableSql = "CREATE TABLE IF NOT EXISTS eventos (" +
                 "id TEXT PRIMARY KEY, " +
                 "nombre TEXT, " +
@@ -39,7 +38,6 @@ public class DatabaseManager {
     }
 
     public void guardar(Evento evento, String ciudad) {
-        // Ahora son 7 columnas en lugar de 9
         String sql = "INSERT OR REPLACE INTO eventos VALUES(?,?,?,?,?,?,?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
