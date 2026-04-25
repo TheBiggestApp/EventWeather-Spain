@@ -38,3 +38,9 @@ build/
 .DS_Store
 .idea/
 src_viejo/main/resources/config.properties
+
+# Ignorar los datos guardados del Sprint 2
+eventstore/
+
+# Por si acaso también guardas archivos .events en la raíz
+*.events
