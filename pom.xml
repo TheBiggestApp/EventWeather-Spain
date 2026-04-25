@@ -18,6 +18,7 @@
     <modules>
         <module>ticketmaster-module</module>
         <module>openweather-module</module>
+        <module>predicthq-module</module>
     </modules>
 
     <dependencies>
