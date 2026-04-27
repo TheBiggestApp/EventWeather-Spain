@@ -9,12 +9,12 @@ public class Config {
     static {
         try (InputStream input = Config.class.getClassLoader().getResourceAsStream("config.properties")) {
             if (input == null) {
-                System.err.println("ERROR: No se encuentra config.properties en el módulo Ticketmaster.");
+                System.err.println("ERROR: No se encuentra config.properties en Event Store Builder.");
             } else {
                 props.load(input);
             }
         } catch (Exception e) {
-            System.err.println("ERROR al cargar config.properties en Ticketmaster: " + e.getMessage());
+            System.err.println("ERROR al cargar config.properties: " + e.getMessage());
         }
     }
 

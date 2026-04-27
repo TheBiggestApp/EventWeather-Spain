@@ -10,10 +10,14 @@ public class TicketmasterService {
     private final String apiKey = Config.get("TICKETMASTER_KEY");
 
     public String fetchEventsJson(String city) throws Exception {
-        String url = String.format("https://app.ticketmaster.com/discovery/v2/events.json?apikey=%s&city=%s&countryCode=ES", apiKey, city);
+        String url = String.format(
+                "https://app.ticketmaster.com/discovery/v2/events.json?apikey=%s&city=%s&countryCode=ES",
+                apiKey, city);
         Request request = new Request.Builder().url(url).build();
         try (Response response = client.newCall(request).execute()) {
-            return response.body().string();
+            String body = response.body().string();
+            System.out.println("[TicketmasterService] Respuesta para " + city + ": " + body.substring(0, Math.min(300, body.length())));
+            return body;
         }
     }
 
@@ -24,20 +28,14 @@ public class TicketmasterService {
     }
 
     public Evento parseToEvento(JsonObject jsonObject) {
-        String id = jsonObject.get("id").getAsString();
+        String id   = jsonObject.get("id").getAsString();
         String name = jsonObject.get("name").getAsString();
 
         JsonObject start = jsonObject.getAsJsonObject("dates").getAsJsonObject("start");
         String date = start.get("localDate").getAsString();
-
         String time = start.has("localTime") ? start.get("localTime").getAsString() : "00:00:00";
 
-        JsonObject venue = jsonObject.getAsJsonObject("_embedded").getAsJsonArray("venues").get(0).getAsJsonObject();
-        JsonObject location = venue.getAsJsonObject("location");
-        double lat = location.get("latitude").getAsDouble();
-        double lon = location.get("longitude").getAsDouble();
-
-        Evento evento = new Evento(id, name, date, lat, lon);
+        Evento evento = new Evento(id, name, date);
         evento.setHora(time);
         return evento;
     }

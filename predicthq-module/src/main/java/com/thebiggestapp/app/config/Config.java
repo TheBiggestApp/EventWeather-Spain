@@ -9,18 +9,18 @@ public class Config {
     static {
         try (InputStream input = Config.class.getClassLoader().getResourceAsStream("config.properties")) {
             if (input == null) {
-                System.err.println("ERROR: No se encuentra config.properties en la carpeta resources del módulo.");
+                System.err.println("ERROR: No se encuentra config.properties en el módulo PredictHQ.");
             } else {
                 props.load(input);
             }
         } catch (Exception e) {
-            System.err.println("ERROR al cargar config.properties: " + e.getMessage());
+            System.err.println("ERROR al cargar config.properties en PredictHQ: " + e.getMessage());
         }
     }
 
     public static String get(String key) {
         String value = props.getProperty(key);
-        if (value == null) System.err.println("ADVERTENCIA: La clave [" + key + "] no existe en el config.");
+        if (value == null) System.err.println("ADVERTENCIA: La clave [" + key + "] no existe en config.");
         return value;
     }
 }

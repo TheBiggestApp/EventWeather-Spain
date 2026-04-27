@@ -4,13 +4,9 @@ import com.thebiggestapp.app.scheduler.WeatherController;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("--- INICIANDO OPENWEATHER MODULE ---");
-        try {
-            WeatherController task = new WeatherController();
-            task.run();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        System.out.println("--- PROGRAMA FINALIZADO ---");
+        System.out.println("--- INICIANDO OPENWEATHER MODULE (Sprint 2) ---");
+        WeatherController controller = new WeatherController();
+        controller.start();
+        // El scheduler mantiene el proceso vivo indefinidamente
     }
 }

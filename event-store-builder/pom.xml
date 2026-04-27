@@ -10,7 +10,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>predicthq-module</artifactId>
+    <artifactId>event-store-builder</artifactId>
 
     <build>
         <plugins>

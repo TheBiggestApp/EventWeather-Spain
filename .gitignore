@@ -1,46 +1,20 @@
+# Ignorar carpetas de compilación (TODAS)
 target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
-*.iws
-*.iml
-*.ipr
-
-### Eclipse ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+**/target/
 build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+bin/
 
-### VS Code ###
-.vscode/
+# Ignorar TODOS los archivos de configuración con secretos
+**/config.properties
 
-### Mac OS ###
-.DS_Store
+# Ignorar IDEs
 .idea/
-src_viejo/main/resources/config.properties
+.vscode/
+*.iml
 
-# Ignorar los datos guardados del Sprint 2
+# Datos del Sprint 2
 eventstore/
-
-# Por si acaso también guardas archivos .events en la raíz
 *.events
+
+# Mac
+.DS_Store

@@ -10,17 +10,25 @@ public class OpenWeatherService {
     private final String key = Config.get("OPENWEATHER_KEY");
 
     public Clima getClimaPorCiudad(String ciudad) throws Exception {
-        String url = "https://api.openweathermap.org/data/2.5/weather?q=" + ciudad + ",ES&appid=" + key + "&units=metric&lang=es";
+        String url = "https://api.openweathermap.org/data/2.5/weather?q="
+                + ciudad + ",ES&appid=" + key + "&units=metric&lang=es";
         Request req = new Request.Builder().url(url).build();
 
         try (Response res = client.newCall(req).execute()) {
-            if (!res.isSuccessful()) throw new RuntimeException("Error en API: " + res.code());
+            if (!res.isSuccessful()) throw new RuntimeException("Error en API OpenWeather: " + res.code());
 
             JsonObject json = JsonParser.parseString(res.body().string()).getAsJsonObject();
-            double temp = json.getAsJsonObject("main").get("temp").getAsDouble();
-            String desc = json.getAsJsonArray("weather").get(0).getAsJsonObject().get("description").getAsString();
+            JsonObject main = json.getAsJsonObject("main");
 
-            return new Clima(ciudad, temp, desc);
+            double temp      = main.get("temp").getAsDouble();
+            double tempMin   = main.get("temp_min").getAsDouble();
+            double tempMax   = main.get("temp_max").getAsDouble();
+            int    humidity  = main.get("humidity").getAsInt();
+            double windSpeed = json.getAsJsonObject("wind").get("speed").getAsDouble();
+            String desc      = json.getAsJsonArray("weather").get(0)
+                                   .getAsJsonObject().get("description").getAsString();
+
+            return new Clima(ciudad, temp, desc, tempMin, tempMax, humidity, windSpeed);
         }
     }
 }

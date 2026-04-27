@@ -20,7 +20,7 @@ public class Config {
 
     public static String get(String key) {
         String value = props.getProperty(key);
-        if (value == null) System.err.println("ADVERTENCIA: La clave [" + key + "] no existe en el config de este módulo.");
+        if (value == null) System.err.println("ADVERTENCIA: La clave [" + key + "] no existe en config.");
         return value;
     }
 }

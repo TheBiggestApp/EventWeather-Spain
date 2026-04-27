@@ -45,8 +45,6 @@ public class DatabaseManager {
             pstmt.setString(2, evento.getNombre());
             pstmt.setString(3, evento.getFecha());
             pstmt.setString(4, evento.getHora());
-            pstmt.setDouble(5, evento.getLatitud());
-            pstmt.setDouble(6, evento.getLongitud());
             pstmt.setString(7, ciudad);
 
             pstmt.executeUpdate();
