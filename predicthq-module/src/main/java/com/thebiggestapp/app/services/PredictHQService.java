@@ -65,6 +65,13 @@ public class PredictHQService {
                 .addQueryParameter("sort", "-rank")
                 .addQueryParameter("limit", "50");
 
+        // --- INICIO DEL FILTRO DE CATEGORÍAS ---
+        String categorias = Config.get("PREDICTHQ_CATEGORIES");
+        if (categorias != null && !categorias.isEmpty()) {
+            urlBuilder.addQueryParameter("category", categorias);
+        }
+        // --- FIN DEL FILTRO DE CATEGORÍAS ---
+
         if (coords != null) {
             String within = (int) coords[2] + "km@" + coords[0] + "," + coords[1];
             urlBuilder.addQueryParameter("within", within);
@@ -104,7 +111,7 @@ public class PredictHQService {
         String fechaFin = jsonObject.has("end_local") && !jsonObject.get("end_local").isJsonNull()
                 ? jsonObject.get("end_local").getAsString()
                 : (jsonObject.has("end") && !jsonObject.get("end").isJsonNull()
-                        ? jsonObject.get("end").getAsString() : fechaInicio);
+                   ? jsonObject.get("end").getAsString() : fechaInicio);
 
         int impacto = jsonObject.has("rank") ? jsonObject.get("rank").getAsInt() : 0;
 
