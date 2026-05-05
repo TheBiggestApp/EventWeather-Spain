@@ -34,6 +34,20 @@ public class PredictHQController {
         System.out.println("[PredictHQController] Iniciado. Topic '" + TOPIC + "' cada " + PERIOD_H + "h.");
     }
 
+    // NUEVO MÉTODO: Ejecuta una sola ciudad al instante (sin temporizador de 24h)
+    public void startSingleCity(String ciudadElegida) {
+        System.out.println("[PredictHQController] Iniciando búsqueda manual solo para: " + ciudadElegida);
+
+        // Abrimos la conexión con ActiveMQ
+        try (ActiveMQPublisher publisher = new ActiveMQPublisher(TOPIC)) {
+            // Llamamos al método que ya tienes para procesar una sola ciudad
+            synchronizeCity(ciudadElegida, publisher);
+            System.out.println("[PredictHQController] Búsqueda finalizada.");
+        } catch (Exception e) {
+            System.err.println("[PredictHQController] Error al procesar la ciudad " + ciudadElegida + ": " + e.getMessage());
+        }
+    }
+
     private void captureAndPublish() {
         List<String> ciudades = predictHQ.getCities();
         try (ActiveMQPublisher publisher = new ActiveMQPublisher(TOPIC)) {
