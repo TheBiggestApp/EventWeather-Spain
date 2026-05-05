@@ -109,19 +109,27 @@ public class PredictHQService {
         int impacto = jsonObject.has("rank") ? jsonObject.get("rank").getAsInt() : 0;
 
         double latitud = 0.0, longitud = 0.0;
-        if (jsonObject.has("geo") && !jsonObject.get("geo").isJsonNull()) {
-            JsonObject geo = jsonObject.getAsJsonObject("geo");
-            if (geo.has("geometry") && !geo.get("geometry").isJsonNull()) {
-                JsonArray coords = geo.getAsJsonObject("geometry").getAsJsonArray("coordinates");
-                longitud = coords.get(0).getAsDouble();
-                latitud  = coords.get(1).getAsDouble();
-            }
-        } else if (jsonObject.has("location") && !jsonObject.get("location").isJsonNull()) {
+
+        // Primero intentamos usar "location", que SIEMPRE es un array simple de [longitud, latitud]
+        if (jsonObject.has("location") && !jsonObject.get("location").isJsonNull()) {
             JsonArray loc = jsonObject.getAsJsonArray("location");
             longitud = loc.get(0).getAsDouble();
             latitud  = loc.get(1).getAsDouble();
         }
+        // Si no hay location, intentamos con "geo" pero asegurándonos de que sea un "Point"
+        else if (jsonObject.has("geo") && !jsonObject.get("geo").isJsonNull()) {
+            JsonObject geo = jsonObject.getAsJsonObject("geo");
+            if (geo.has("geometry") && !geo.get("geometry").isJsonNull()) {
+                JsonObject geometry = geo.getAsJsonObject("geometry");
 
+                // Solo extraemos si el tipo de geometría es un punto simple
+                if (geometry.has("type") && "Point".equals(geometry.get("type").getAsString())) {
+                    JsonArray coords = geometry.getAsJsonArray("coordinates");
+                    longitud = coords.get(0).getAsDouble();
+                    latitud  = coords.get(1).getAsDouble();
+                }
+            }
+        }
         return new EventoPHQ(id, titulo, categoria, fechaInicio, fechaFin, latitud, longitud, impacto);
     }
 }
