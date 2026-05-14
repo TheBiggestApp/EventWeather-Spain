@@ -1,4 +1,0 @@
-ACTIVEMQ_URL=tcp://localhost:61616
-API_PORT=7070
-EVENT_STORE_PATH=../event-store-builder/eventstore
-DATAMART_PATH=datamart/business_unit.db
