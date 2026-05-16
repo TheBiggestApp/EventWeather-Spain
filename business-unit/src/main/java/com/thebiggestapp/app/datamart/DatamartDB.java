@@ -41,7 +41,7 @@ public class DatamartDB {
         try (Statement st = connection.createStatement()) {
             st.execute("""
                 CREATE TABLE IF NOT EXISTS weather_events (
-                    ciudad      TEXT PRIMARY KEY,
+                    ciudad      TEXT,
                     ts          TEXT NOT NULL,
                     temp        REAL,
                     temp_min    REAL,
@@ -49,7 +49,8 @@ public class DatamartDB {
                     descripcion TEXT,
                     humidity    INTEGER,
                     wind_speed  REAL,
-                    ss          TEXT
+                    ss          TEXT,
+                    PRIMARY KEY (ciudad, ts)
                 )
                 """);
             st.execute("""
