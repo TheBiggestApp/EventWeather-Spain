@@ -17,12 +17,13 @@ public class RestApi {
 	 * Arranca el servidor de la API REST en el puerto 7070 y define las rutas.
 	 */
 	public void start() {
-		// Creamos la app de Javalin y la iniciamos en el puerto 7070
-		app = Javalin.create(config -> {
-			config.bundledPlugins.enableCors(cors -> cors.addRule(it -> it.anyHost())); // Por si necesitas conectar un Frontend web luego
-		}).start(7070);
+		// Leemos el puerto del config, si no existe usamos el 7070 por defecto
+		int port = Integer.parseInt(com.thebiggestapp.app.config.Config.get("API_PORT", "7070"));
 
-		System.out.println("[RestApi] Servidor iniciado en http://localhost:7070");
+		app = Javalin.create().start(port);
+
+		System.out.println("[RestApi] Servidor iniciado en http://localhost:" + port);
+
 
 		// -------------------------------------------------------------------
 		// DEFINICIÓN DE LOS 9 ENDPOINTS DEL COMMIT 7
