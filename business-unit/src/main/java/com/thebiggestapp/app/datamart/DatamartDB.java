@@ -230,25 +230,24 @@ public class DatamartDB {
     }
 
     public ResultSet findEventosConClima(String ciudad, String fecha) throws SQLException {
-        // El clima solo cubre el día actual, así que el JOIN intenta primero
-        // por fecha exacta y, si no hay dato de ese día, coge el clima más
-        // reciente disponible para esa ciudad (fallback por ciudad).
+        // El clima solo existe para hoy (OpenWeather no da histórico).
+        // El JOIN une SOLO cuando DATE(fecha_inicio) = DATE(ts del clima),
+        // es decir, cuando el evento es hoy. Para otros días los campos
+        // de clima salen null (correcto: no tenemos ese dato).
+        // Se añade la columna 'clima_disponible' para que el frontend sepa
+        // si hay datos reales o no.
         StringBuilder sql = new StringBuilder("""
             SELECT e.id, e.ciudad, e.titulo, e.categoria,
                    e.fecha_inicio, e.impacto, e.venue, e.url, e.fuente,
                    w.temperatura, w.temp_min, w.temp_max,
                    w.humidity as humedad, w.wind_speed as viento,
-                   w.titulo as tiempo
+                   w.titulo as tiempo,
+                   CASE WHEN w.id IS NOT NULL THEN 1 ELSE 0 END as clima_disponible
             FROM unified_datamart e
             LEFT JOIN unified_datamart w
                    ON LOWER(e.ciudad) = LOWER(w.ciudad)
                    AND w.fuente = 'WEATHER'
-                   AND w.ts = (
-                       SELECT MAX(w2.ts)
-                       FROM unified_datamart w2
-                       WHERE w2.fuente = 'WEATHER'
-                         AND LOWER(w2.ciudad) = LOWER(e.ciudad)
-                   )
+                   AND DATE(e.fecha_inicio) = DATE(w.ts)
             WHERE e.fuente != 'WEATHER'
             """);
 
