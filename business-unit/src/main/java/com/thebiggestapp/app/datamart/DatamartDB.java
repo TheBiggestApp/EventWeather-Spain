@@ -230,21 +230,31 @@ public class DatamartDB {
     }
 
     public ResultSet findEventosConClima(String ciudad, String fecha) throws SQLException {
+        // El clima solo cubre el día actual, así que el JOIN intenta primero
+        // por fecha exacta y, si no hay dato de ese día, coge el clima más
+        // reciente disponible para esa ciudad (fallback por ciudad).
         StringBuilder sql = new StringBuilder("""
             SELECT e.id, e.ciudad, e.titulo, e.categoria,
                    e.fecha_inicio, e.impacto, e.venue, e.url, e.fuente,
-                   w.temperatura, w.temp_min, w.temp_max, w.titulo as tiempo
+                   w.temperatura, w.temp_min, w.temp_max,
+                   w.humidity as humedad, w.wind_speed as viento,
+                   w.titulo as tiempo
             FROM unified_datamart e
             LEFT JOIN unified_datamart w
                    ON LOWER(e.ciudad) = LOWER(w.ciudad)
-                   AND DATE(e.fecha_inicio) = DATE(w.ts)
                    AND w.fuente = 'WEATHER'
+                   AND w.ts = (
+                       SELECT MAX(w2.ts)
+                       FROM unified_datamart w2
+                       WHERE w2.fuente = 'WEATHER'
+                         AND LOWER(w2.ciudad) = LOWER(e.ciudad)
+                   )
             WHERE e.fuente != 'WEATHER'
             """);
 
         if (ciudad != null) sql.append(" AND LOWER(e.ciudad) = LOWER(?)");
         if (fecha  != null) sql.append(" AND DATE(e.fecha_inicio) = ?");
-        sql.append(" ORDER BY e.fecha_inicio DESC LIMIT 200");
+        sql.append(" ORDER BY e.fecha_inicio ASC LIMIT 200");
 
         PreparedStatement ps = connection.prepareStatement(sql.toString());
         int idx = 1;

@@ -24,9 +24,27 @@ public class RestApi {
 
 		System.out.println("[RestApi] Servidor iniciado en http://localhost:" + port);
 
+		// -------------------------------------------------------------------
+		// RUTA RAÍZ — lista de endpoints disponibles
+		// -------------------------------------------------------------------
+		app.get("/", ctx -> ctx.json(Map.of(
+				"status", "UP",
+				"endpoints", List.of(
+						"/api/status",
+						"/api/weather",
+						"/api/weather/{ciudad}",
+						"/api/events/impact?min=X&ciudad=Y",
+						"/api/events/categories",
+						"/api/events/category/{cat}",
+						"/api/events/entertainment?ciudad=X&fecha=Y",
+						"/api/analysis/top-cities?limit=N",
+						"/api/analysis/weather-vs-events/{ciudad}",
+						"/api/analysis/events-with-weather?ciudad=X&fecha=Y"
+				)
+		)));
 
 		// -------------------------------------------------------------------
-		// DEFINICIÓN DE LOS 9 ENDPOINTS DEL COMMIT 7
+		// DEFINICIÓN DE LOS ENDPOINTS
 		// -------------------------------------------------------------------
 
 		// 1. Estado del datamart
@@ -136,6 +154,19 @@ public class RestApi {
 				ctx.json(combinedData);
 			} catch (SQLException e) {
 				ctx.status(500).result("Error al generar análisis combinado: " + e.getMessage());
+			}
+		});
+
+		// 10. Eventos con clima unificado — JOIN por ciudad, clima más reciente disponible
+		// Acepta ?ciudad=X (opcional) y ?fecha=YYYY-MM-DD (opcional)
+		app.get("/api/analysis/events-with-weather", ctx -> {
+			try {
+				String ciudad = ctx.queryParam("ciudad");
+				String fecha  = ctx.queryParam("fecha");
+				ResultSet rs  = db.findEventosConClima(ciudad, fecha);
+				ctx.json(ResultSetMapper.toList(rs));
+			} catch (SQLException e) {
+				ctx.status(500).result("Error al obtener eventos con clima: " + e.getMessage());
 			}
 		});
 	}
