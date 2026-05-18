@@ -228,4 +228,28 @@ public class DatamartDB {
             throw new IllegalStateException("No se puede abrir la base de datos: " + e.getMessage());
         }
     }
+
+    public ResultSet findEventosConClima(String ciudad, String fecha) throws SQLException {
+        StringBuilder sql = new StringBuilder("""
+            SELECT e.id, e.ciudad, e.titulo, e.categoria,
+                   e.fecha_inicio, e.impacto, e.venue, e.url, e.fuente,
+                   w.temperatura, w.temp_min, w.temp_max, w.titulo as tiempo
+            FROM unified_datamart e
+            LEFT JOIN unified_datamart w
+                   ON LOWER(e.ciudad) = LOWER(w.ciudad)
+                   AND DATE(e.fecha_inicio) = DATE(w.ts)
+                   AND w.fuente = 'WEATHER'
+            WHERE e.fuente != 'WEATHER'
+            """);
+
+        if (ciudad != null) sql.append(" AND LOWER(e.ciudad) = LOWER(?)");
+        if (fecha  != null) sql.append(" AND DATE(e.fecha_inicio) = ?");
+        sql.append(" ORDER BY e.fecha_inicio DESC LIMIT 200");
+
+        PreparedStatement ps = connection.prepareStatement(sql.toString());
+        int idx = 1;
+        if (ciudad != null) ps.setString(idx++, ciudad);
+        if (fecha  != null) ps.setString(idx,   fecha);
+        return ps.executeQuery();
+    }
 }
