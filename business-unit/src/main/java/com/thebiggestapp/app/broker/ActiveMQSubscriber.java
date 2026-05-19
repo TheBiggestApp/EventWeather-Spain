@@ -9,7 +9,7 @@ import javax.jms.*;
 public class ActiveMQSubscriber {
 
 	private final EventParser eventParser = new EventParser();
-	private Connection connection; // Guardamos la conexión como variable de clase para poder cerrarla luego
+	private Connection connection;
 
 	public void startListening() {
 		try {
@@ -19,8 +19,6 @@ public class ActiveMQSubscriber {
 			connection.start();
 
 			Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-
-			// Escuchamos los tres topics que maneja tu parser
 			String[] topics = {"Weather", "PredictHQ", "Ticketmaster"};
 
 			for (String topicName : topics) {
@@ -31,7 +29,6 @@ public class ActiveMQSubscriber {
 					try {
 						if (message instanceof TextMessage textMessage) {
 							String json = textMessage.getText();
-							// Le pasamos el JSON y el nombre del topic a tu EventParser
 							eventParser.process(json, topicName);
 						}
 					} catch (JMSException e) {

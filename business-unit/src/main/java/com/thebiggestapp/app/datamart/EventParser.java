@@ -94,10 +94,6 @@ public class EventParser {
         ));
     }
 
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
-
     private JsonObject resolvePayload(JsonObject event) {
         if (!isBlank(readString(event, "ciudad"))) return event;
         if (event.has("payload")) return event.getAsJsonObject("payload");

@@ -13,20 +13,11 @@ public class RestApi {
 	private final DatamartDB db = DatamartDB.getInstance();
 	private Javalin app;
 
-	/**
-	 * Arranca el servidor de la API REST en el puerto 7070 y define las rutas.
-	 */
 	public void start() {
-		// Leemos el puerto del config, si no existe usamos el 7070 por defecto
 		int port = Integer.parseInt(com.thebiggestapp.app.config.Config.get("API_PORT", "7070"));
-
 		app = Javalin.create().start(port);
-
 		System.out.println("[RestApi] Servidor iniciado en http://localhost:" + port);
 
-		// -------------------------------------------------------------------
-		// RUTA RAÍZ — lista de endpoints disponibles
-		// -------------------------------------------------------------------
 		app.get("/", ctx -> ctx.json(Map.of(
 				"status", "UP",
 				"endpoints", List.of(
@@ -43,11 +34,6 @@ public class RestApi {
 				)
 		)));
 
-		// -------------------------------------------------------------------
-		// DEFINICIÓN DE LOS ENDPOINTS
-		// -------------------------------------------------------------------
-
-		// 1. Estado del datamart
 		app.get("/api/status", ctx -> {
 			try {
 				ResultSet rs = db.findDatamartSummary();
@@ -57,7 +43,6 @@ public class RestApi {
 			}
 		});
 
-		// 2. Clima completo general
 		app.get("/api/weather", ctx -> {
 			try {
 				ResultSet rs = db.findAllWeather();
@@ -67,7 +52,6 @@ public class RestApi {
 			}
 		});
 
-		// 3. Clima filtrado por una ciudad específica
 		app.get("/api/weather/{ciudad}", ctx -> {
 			try {
 				String ciudad = ctx.pathParam("ciudad");
@@ -78,11 +62,10 @@ public class RestApi {
 			}
 		});
 
-		// 4. Eventos PredictHQ filtrados por impacto mínimo (acepta parámetro ?min=X y ?ciudad=Y)
 		app.get("/api/events/impact", ctx -> {
 			try {
 				int minImpacto = ctx.queryParamAsClass("min", Integer.class).getOrDefault(0);
-				String ciudad = ctx.queryParam("ciudad"); // Puede ser null y el método de tu DB ya lo controla
+				String ciudad = ctx.queryParam("ciudad");
 				ResultSet rs = db.findPredictHQByMinImpact(minImpacto, ciudad);
 				ctx.json(ResultSetMapper.toList(rs));
 			} catch (SQLException e) {
@@ -90,7 +73,6 @@ public class RestApi {
 			}
 		});
 
-		// 5. Categorías globales de PredictHQ y sus totales
 		app.get("/api/events/categories", ctx -> {
 			try {
 				ResultSet rs = db.findAllPredictHQCategories();
@@ -100,7 +82,6 @@ public class RestApi {
 			}
 		});
 
-		// 6. Eventos PredictHQ filtrados por una categoría en específico
 		app.get("/api/events/category/{cat}", ctx -> {
 			try {
 				String categoria = ctx.pathParam("cat");
@@ -111,7 +92,6 @@ public class RestApi {
 			}
 		});
 
-		// 7. Eventos de entretenimiento (Ticketmaster - acepta ?ciudad=X y ?fecha=Y opcionales)
 		app.get("/api/events/entertainment", ctx -> {
 			try {
 				String ciudad = ctx.queryParam("ciudad");
@@ -123,7 +103,6 @@ public class RestApi {
 			}
 		});
 
-		// 8. Análisis: Ciudades con más actividad (acepta un ?limit=X, por defecto 5)
 		app.get("/api/analysis/top-cities", ctx -> {
 			try {
 				int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(5);
@@ -134,18 +113,15 @@ public class RestApi {
 			}
 		});
 
-		// 9. Análisis combinado: Clima + Eventos actuales para una ciudad concreta
 		app.get("/api/analysis/weather-vs-events/{ciudad}", ctx -> {
 			try {
 				String ciudad = ctx.pathParam("ciudad");
-
-				// Construimos una respuesta combinada personalizada en un Mapa de Java
 				Map<String, List<Map<String, Object>>> combinedData = new HashMap<>();
 
 				ResultSet weatherRs = db.findWeatherByCiudad(ciudad);
 				combinedData.put("clima", ResultSetMapper.toList(weatherRs));
 
-				ResultSet phqRs = db.findPredictHQByMinImpact(0, ciudad); // Todos los eventos de esa ciudad
+				ResultSet phqRs = db.findPredictHQByMinImpact(0, ciudad);
 				combinedData.put("eventos_predicthq", ResultSetMapper.toList(phqRs));
 
 				ResultSet tmRs = db.findTicketmaster(ciudad, null);
@@ -157,8 +133,6 @@ public class RestApi {
 			}
 		});
 
-		// 10. Eventos con clima unificado — JOIN por ciudad, clima más reciente disponible
-		// Acepta ?ciudad=X (opcional) y ?fecha=YYYY-MM-DD (opcional)
 		app.get("/api/analysis/events-with-weather", ctx -> {
 			try {
 				String ciudad = ctx.queryParam("ciudad");
@@ -171,9 +145,6 @@ public class RestApi {
 		});
 	}
 
-	/**
-	 * Detiene el servidor de la API (útil para cuando se cierre la app).
-	 */
 	public void stop() {
 		if (app != null) {
 			app.stop();

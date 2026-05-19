@@ -10,17 +10,14 @@ public class Main {
 		System.out.println("   INICIANDO MÓDULO BUSINESS UNIT (COMMIT 7)      ");
 		System.out.println("==================================================");
 
-		// 1. Cargar el histórico del Event Store
 		System.out.println("\n[Main] 1. Cargando eventos históricos...");
 		EventStoreReader reader = new EventStoreReader();
 		reader.loadAll();
 
-		// 2. Arrancar la API REST en el puerto 7070
 		System.out.println("\n[Main] 2. Iniciando API REST...");
 		RestApi api = new RestApi();
 		api.start();
 
-		// 3. Iniciar la suscripción en tiempo real en un hilo separado
 		System.out.println("\n[Main] 3. Conectando al broker ActiveMQ en tiempo real...");
 		Thread subscriberThread = new Thread(() -> {
 			ActiveMQSubscriber subscriber = new ActiveMQSubscriber();

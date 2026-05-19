@@ -33,22 +33,17 @@ public class DatamartDB {
         return connection;
     }
 
-    // -----------------------------------------------------------------------
-    // Schema - ONE BIG TABLE (OBT)
-    // -----------------------------------------------------------------------
-
     private void initSchema() {
         try (Statement st = connection.createStatement()) {
-            // Creamos una única tabla maestra que agrupa todos los campos posibles
             st.execute("""
                 CREATE TABLE IF NOT EXISTS unified_datamart (
                     id           TEXT PRIMARY KEY,
-                    fuente       TEXT NOT NULL,  -- 'WEATHER', 'PREDICTHQ', o 'TICKETMASTER'
+                    fuente       TEXT NOT NULL,
                     ts           TEXT NOT NULL,
                     ciudad       TEXT,
-                    titulo       TEXT,           -- Sirve para el nombre del evento o la descripción del clima
+                    titulo       TEXT,
                     categoria    TEXT,
-                    fecha_inicio TEXT,           -- Fecha del evento o fecha del registro del clima
+                    fecha_inicio TEXT,
                     fecha_fin    TEXT,
                     latitud      REAL,
                     longitud     REAL,
@@ -64,7 +59,6 @@ public class DatamartDB {
                 )
                 """);
 
-            // Índices para que las búsquedas en la tabla gigante sean rápidas
             st.execute("CREATE INDEX IF NOT EXISTS idx_uni_fuente ON unified_datamart(fuente)");
             st.execute("CREATE INDEX IF NOT EXISTS idx_uni_ciudad ON unified_datamart(ciudad)");
             st.execute("CREATE INDEX IF NOT EXISTS idx_uni_fecha  ON unified_datamart(fecha_inicio)");
@@ -73,10 +67,6 @@ public class DatamartDB {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Upserts hacia la tabla unificada
-    // -----------------------------------------------------------------------
-
     public synchronized void upsertWeather(WeatherRecord r) {
         String sql = """
             INSERT OR REPLACE INTO unified_datamart
@@ -84,10 +74,10 @@ public class DatamartDB {
             VALUES (?, 'WEATHER', ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, "W_" + r.ciudad() + "_" + r.ts()); // ID compuesto para clima
+            ps.setString(1, "W_" + r.ciudad() + "_" + r.ts());
             ps.setString(2, r.ts());
             ps.setString(3, r.ciudad());
-            ps.setString(4, r.descripcion()); // Usamos 'titulo' para la descripción del cielo
+            ps.setString(4, r.descripcion());
             ps.setDouble(5, r.temp());
             ps.setDouble(6, r.tempMin());
             ps.setDouble(7, r.tempMax());
@@ -134,9 +124,9 @@ public class DatamartDB {
             ps.setString(1,  r.id());
             ps.setString(2,  r.ts());
             ps.setString(3,  r.ciudad());
-            ps.setString(4,  r.nombre()); // Usamos 'titulo' para el nombre del evento
+            ps.setString(4,  r.nombre());
             ps.setString(5,  r.categoria());
-            ps.setString(6,  r.fecha() + " " + r.hora()); // Unificamos en fecha_inicio
+            ps.setString(6,  r.fecha() + " " + r.hora());
             ps.setString(7,  r.venue());
             ps.setString(8,  r.url());
             ps.setString(9, r.ss());
@@ -145,10 +135,6 @@ public class DatamartDB {
             System.err.println("[DatamartDB] Error al guardar evento Ticketmaster: " + e.getMessage());
         }
     }
-
-    // -----------------------------------------------------------------------
-    // Queries filtradas por la columna 'fuente'
-    // -----------------------------------------------------------------------
 
     public ResultSet findAllWeather() throws SQLException {
         return connection.createStatement()
@@ -213,10 +199,6 @@ public class DatamartDB {
         return ps.executeQuery();
     }
 
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
-
     private Connection openConnection(String dbPath) {
         try {
             var dir = Paths.get(dbPath).getParent();
@@ -230,25 +212,18 @@ public class DatamartDB {
     }
 
     public ResultSet findEventosConClima(String ciudad, String fecha) throws SQLException {
-        // El clima solo cubre el día actual, así que el JOIN intenta primero
-        // por fecha exacta y, si no hay dato de ese día, coge el clima más
-        // reciente disponible para esa ciudad (fallback por ciudad).
         StringBuilder sql = new StringBuilder("""
             SELECT e.id, e.ciudad, e.titulo, e.categoria,
                    e.fecha_inicio, e.impacto, e.venue, e.url, e.fuente,
                    w.temperatura, w.temp_min, w.temp_max,
                    w.humidity as humedad, w.wind_speed as viento,
-                   w.titulo as tiempo
+                   w.titulo as tiempo,
+                   CASE WHEN w.id IS NOT NULL THEN 1 ELSE 0 END as clima_disponible
             FROM unified_datamart e
             LEFT JOIN unified_datamart w
                    ON LOWER(e.ciudad) = LOWER(w.ciudad)
                    AND w.fuente = 'WEATHER'
-                   AND w.ts = (
-                       SELECT MAX(w2.ts)
-                       FROM unified_datamart w2
-                       WHERE w2.fuente = 'WEATHER'
-                         AND LOWER(w2.ciudad) = LOWER(e.ciudad)
-                   )
+                   AND DATE(e.fecha_inicio) = DATE(w.ts)
             WHERE e.fuente != 'WEATHER'
             """);
 
