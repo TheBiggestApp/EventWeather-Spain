@@ -35,11 +35,13 @@ public class WeatherController {
         try (ActiveMQPublisher publisher = new ActiveMQPublisher(TOPIC)) {
             for (String ciudad : ciudades) {
                 try {
-                    Clima clima = weatherService.getClimaPorCiudad(ciudad);
-                    Event event = buildEvent(clima);
-                    publisher.publish(event);
-                    System.out.printf("[WeatherController] -> [%s] %.1f°C, %s%n",
-                            clima.getCiudad(), clima.getTemp(), clima.getDesc());
+                    List<Clima> forecast = weatherService.getForecastPorCiudad(ciudad);
+                    for (Clima clima : forecast) {
+                        Event event = buildEvent(clima);
+                        publisher.publish(event);
+                        System.out.printf("[WeatherController] -> [%s] %s %.1f°C, %s%n",
+                                clima.getCiudad(), clima.getFecha(), clima.getTemp(), clima.getDesc());
+                    }
                 } catch (Exception e) {
                     System.err.println("[WeatherController] Fallo en " + ciudad + ": " + e.getMessage());
                 }
@@ -72,6 +74,7 @@ public class WeatherController {
     private Event buildEvent(Clima clima) {
         JsonObject payload = new JsonObject();
         payload.addProperty("ciudad",      clima.getCiudad());
+        payload.addProperty("fecha",       clima.getFecha());
         payload.addProperty("temp",        clima.getTemp());
         payload.addProperty("temp_min",    clima.getTempMin());
         payload.addProperty("temp_max",    clima.getTempMax());

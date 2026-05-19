@@ -1,6 +1,8 @@
 package com.thebiggestapp.app.api;
 
 import com.thebiggestapp.app.datamart.DatamartDB;
+import com.thebiggestapp.app.services.EventWeatherState;
+import com.thebiggestapp.app.services.HistoricalWeatherService;
 import io.javalin.Javalin;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -11,6 +13,7 @@ import java.util.Map;
 public class RestApi {
 
 	private final DatamartDB db = DatamartDB.getInstance();
+	private final HistoricalWeatherService historicalWeather = new HistoricalWeatherService();
 	private Javalin app;
 
 	public void start() {
@@ -138,7 +141,45 @@ public class RestApi {
 				String ciudad = ctx.queryParam("ciudad");
 				String fecha  = ctx.queryParam("fecha");
 				ResultSet rs  = db.findEventosConClima(ciudad, fecha);
-				ctx.json(ResultSetMapper.toList(rs));
+				List<Map<String, Object>> eventos = ResultSetMapper.toList(rs);
+
+				for (Map<String, Object> evento : eventos) {
+					String fechaInicio = (String) evento.get("fecha_inicio");
+					String estado      = EventWeatherState.calcular(fechaInicio);
+					evento.put("weather_state", estado);
+
+					boolean sinDatosClima = evento.get("temperatura") == null;
+
+					if (EventWeatherState.PREDICCION_HISTORICA.equals(estado)) {
+						// Para eventos a más de 14 días: estimación histórica de Open-Meteo
+						String fechaSolo = (fechaInicio != null && fechaInicio.length() >= 10)
+								? fechaInicio.substring(0, 10) : null;
+						double[] latLon = (ciudad != null && fechaSolo != null)
+								? db.findLatLonForEvent(ciudad, fechaSolo) : null;
+
+						if (latLon != null && latLon[0] != 0 && latLon[1] != 0) {
+							Map<String, Object> hist = historicalWeather.getEstimacion(latLon[0], latLon[1], fechaInicio);
+							// Solo sobreescribimos campos de clima, no los del evento
+							hist.forEach((k, v) -> evento.putIfAbsent(k, v));
+							// Sobreescribimos siempre el estado y el warning
+							evento.put("weather_state",   hist.get("weather_state"));
+							evento.put("weather_warning", hist.get("weather_warning"));
+						} else {
+							evento.put("weather_warning", "Estimación histórica no disponible: coordenadas desconocidas.");
+						}
+
+					} else if (EventWeatherState.TENDENCIA_GENERAL.equals(estado)) {
+						evento.put("weather_warning", "Pronóstico estimado (5–14 días). Puede variar.");
+
+					} else {
+						// PRONOSTICO_CONFIRMADO: datos reales de OpenWeather, sin warning
+						if (sinDatosClima) {
+							evento.put("weather_warning", "Datos de clima aún no disponibles para esta fecha.");
+						}
+					}
+				}
+
+				ctx.json(eventos);
 			} catch (SQLException e) {
 				ctx.status(500).result("Error al obtener eventos con clima: " + e.getMessage());
 			}

@@ -10,6 +10,6 @@ public record PredictHQRecord(
         String fechaFin,
         double latitud,
         double longitud,
-        int    impacto,
+        int impacto,
         String ss
 ) {}

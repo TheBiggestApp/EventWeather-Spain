@@ -229,13 +229,33 @@ public class DatamartDB {
         }
     }
 
+    /**
+     * Devuelve lat/lon de un evento concreto (por ciudad + fecha) para poder
+     * consultar la estimación histórica cuando el pronóstico no cubre la fecha.
+     */
+    public double[] findLatLonForEvent(String ciudad, String fecha) {
+        String sql = "SELECT latitud, longitud FROM unified_datamart " +
+                     "WHERE fuente IN ('PREDICTHQ','TICKETMASTER') " +
+                     "AND LOWER(ciudad) = LOWER(?) AND DATE(fecha_inicio) = ? " +
+                     "AND latitud != 0 LIMIT 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, ciudad);
+            ps.setString(2, fecha);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return new double[]{rs.getDouble("latitud"), rs.getDouble("longitud")};
+        } catch (SQLException e) {
+            System.err.println("[DatamartDB] Error al buscar lat/lon: " + e.getMessage());
+        }
+        return null;
+    }
+
     public ResultSet findEventosConClima(String ciudad, String fecha) throws SQLException {
         // El clima solo cubre el día actual, así que el JOIN intenta primero
         // por fecha exacta y, si no hay dato de ese día, coge el clima más
         // reciente disponible para esa ciudad (fallback por ciudad).
         StringBuilder sql = new StringBuilder("""
-            SELECT e.id, e.ciudad, e.titulo, e.categoria,
-                   e.fecha_inicio, e.impacto, e.venue, e.url, e.fuente,
+            SELECT e.id, e.ciudad, e.titulo,
+                   e.fecha_inicio, e.fuente,
                    w.temperatura, w.temp_min, w.temp_max,
                    w.humidity as humedad, w.wind_speed as viento,
                    w.titulo as tiempo
