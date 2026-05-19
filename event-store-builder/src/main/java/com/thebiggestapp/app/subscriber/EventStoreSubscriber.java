@@ -6,19 +6,10 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 
 import javax.jms.*;
 
-/**
- * Se suscribe de forma DURABLE a los topics de ActiveMQ y persiste
- * cada mensaje recibido en el EventStore.
- *
- * La suscripción durable garantiza que, si este módulo se detiene,
- * al reiniciar recuperará los mensajes no consumidos.
- */
 public class EventStoreSubscriber {
 
-    // Topics a los que suscribirse (deben coincidir con los feeders)
     private static final String[] TOPICS = {"Weather", "Ticketmaster", "PredictHQ"};
 
-    // ID único del cliente JMS para suscripciones durables
     private static final String CLIENT_ID = "event-store-builder";
 
     private final EventStore eventStore = new EventStore();
@@ -28,20 +19,16 @@ public class EventStoreSubscriber {
         ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(brokerUrl);
 
         Connection connection = factory.createConnection();
-        // El clientID es obligatorio para suscripciones durables
         connection.setClientID(CLIENT_ID);
         connection.start();
 
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
-        // Crear una suscripción durable por cada topic
         for (String topicName : TOPICS) {
             Topic topic = session.createTopic(topicName);
-            // El nombre de la suscripción durable debe ser único por topic
             String subscriptionName = CLIENT_ID + "-" + topicName;
             MessageConsumer consumer = session.createDurableSubscriber(topic, subscriptionName);
 
-            // Listener asíncrono: cada mensaje recibido se persiste en el EventStore
             final String capturedTopic = topicName;
             consumer.setMessageListener(message -> {
                 try {
@@ -62,11 +49,9 @@ public class EventStoreSubscriber {
 
         System.out.println("[EventStoreBuilder] Escuchando mensajes... (Ctrl+C para detener)");
 
-        // Mantener el proceso vivo
         addShutdownHook(connection);
     }
 
-    /** Cierra la conexión limpiamente al hacer Ctrl+C. */
     private void addShutdownHook(Connection connection) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("[EventStoreBuilder] Cerrando conexión...");
@@ -77,7 +62,6 @@ public class EventStoreSubscriber {
             }
         }));
 
-        // Bloquear el hilo principal para que el proceso no termine
         try {
             Thread.currentThread().join();
         } catch (InterruptedException e) {
