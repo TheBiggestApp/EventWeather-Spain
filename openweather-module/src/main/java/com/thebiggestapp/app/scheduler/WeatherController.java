@@ -15,11 +15,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Feeder OpenWeather: captura datos meteorológicos periódicamente
- * y los publica como eventos JSON en el topic "Weather" de ActiveMQ.
- * Las ciudades se leen dinámicamente de cities.properties.
- */
 public class WeatherController {
 
     private static final String TOPIC     = "Weather";
@@ -36,7 +31,6 @@ public class WeatherController {
         System.out.println("[WeatherController] Iniciado. Publicando en topic '" + TOPIC + "' cada " + PERIOD_H + "h.");
     }
 
-    /** Una pasada: captura todas las ciudades y publica un evento por ciudad. */
     private void captureAndPublish() {
         try (ActiveMQPublisher publisher = new ActiveMQPublisher(TOPIC)) {
             for (String ciudad : ciudades) {
@@ -55,11 +49,6 @@ public class WeatherController {
         }
     }
 
-    /**
-     * Lee cities.properties y extrae los nombres de ciudad.
-     * Formato esperado: NombreCiudad=lat,lon,radius  (las líneas con '#' se ignoran).
-     * Los guiones bajos en el nombre se reemplazan por espacios para la query a OpenWeather.
-     */
     private static List<String> loadCiudades() {
         List<String> result = new ArrayList<>();
         try (InputStream is = WeatherController.class
@@ -71,7 +60,6 @@ public class WeatherController {
             Properties props = new Properties();
             props.load(is);
             for (String key : props.stringPropertyNames()) {
-                // Reemplazamos guion bajo por espacio: "Palma_de_Mallorca" -> "Palma de Mallorca"
                 result.add(key.replace("_", " "));
             }
             result.sort(String::compareTo);
@@ -81,7 +69,6 @@ public class WeatherController {
         return result;
     }
 
-    /** Construye el evento con la estructura mínima: ts, ss + payload. */
     private Event buildEvent(Clima clima) {
         JsonObject payload = new JsonObject();
         payload.addProperty("ciudad",      clima.getCiudad());

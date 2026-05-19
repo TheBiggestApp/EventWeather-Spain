@@ -7,6 +7,5 @@ public class Main {
         System.out.println("--- INICIANDO OPENWEATHER MODULE (Sprint 2) ---");
         WeatherController controller = new WeatherController();
         controller.start();
-        // El scheduler mantiene el proceso vivo indefinidamente
     }
 }
