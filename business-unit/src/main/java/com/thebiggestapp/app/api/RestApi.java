@@ -136,6 +136,17 @@ public class RestApi {
 			}
 		});
 
+		app.get("/api/debug/ciudades", ctx -> {
+			try {
+				ResultSet rs = db.getConnection().createStatement().executeQuery(
+						"SELECT fuente, ciudad, COUNT(*) as total FROM unified_datamart GROUP BY fuente, ciudad ORDER BY fuente"
+				);
+				ctx.json(ResultSetMapper.toList(rs));
+			} catch (SQLException e) {
+				ctx.status(500).result("Error: " + e.getMessage());
+			}
+		});
+
 		app.get("/api/analysis/events-with-weather", ctx -> {
 			try {
 				String ciudad = ctx.queryParam("ciudad");
@@ -151,17 +162,19 @@ public class RestApi {
 					boolean sinDatosClima = evento.get("temperatura") == null;
 
 					if (EventWeatherState.PREDICCION_HISTORICA.equals(estado)) {
-						// Para eventos a más de 14 días: estimación histórica de Open-Meteo
 						String fechaSolo = (fechaInicio != null && fechaInicio.length() >= 10)
 								? fechaInicio.substring(0, 10) : null;
+
 						double[] latLon = (ciudad != null && fechaSolo != null)
 								? db.findLatLonForEvent(ciudad, fechaSolo) : null;
 
+						if (latLon == null && ciudad != null) {
+							latLon = HistoricalWeatherService.getCoordsForCity(ciudad.toLowerCase());
+						}
+
 						if (latLon != null && latLon[0] != 0 && latLon[1] != 0) {
 							Map<String, Object> hist = historicalWeather.getEstimacion(latLon[0], latLon[1], fechaInicio);
-							// Solo sobreescribimos campos de clima, no los del evento
-							hist.forEach((k, v) -> evento.putIfAbsent(k, v));
-							// Sobreescribimos siempre el estado y el warning
+							hist.forEach((k, v) -> evento.put(k, v));
 							evento.put("weather_state",   hist.get("weather_state"));
 							evento.put("weather_warning", hist.get("weather_warning"));
 						} else {
@@ -172,7 +185,6 @@ public class RestApi {
 						evento.put("weather_warning", "Pronóstico estimado (5–14 días). Puede variar.");
 
 					} else {
-						// PRONOSTICO_CONFIRMADO: datos reales de OpenWeather, sin warning
 						if (sinDatosClima) {
 							evento.put("weather_warning", "Datos de clima aún no disponibles para esta fecha.");
 						}

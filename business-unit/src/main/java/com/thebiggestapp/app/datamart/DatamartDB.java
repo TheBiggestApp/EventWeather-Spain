@@ -261,13 +261,13 @@ public class DatamartDB {
                    w.titulo as tiempo
             FROM unified_datamart e
             LEFT JOIN unified_datamart w
-                   ON LOWER(e.ciudad) = LOWER(w.ciudad)
+                   ON REPLACE(LOWER(e.ciudad), '_', ' ') = REPLACE(LOWER(w.ciudad), '_', ' ')
                    AND w.fuente = 'WEATHER'
                    AND w.ts = (
                        SELECT MAX(w2.ts)
                        FROM unified_datamart w2
                        WHERE w2.fuente = 'WEATHER'
-                         AND LOWER(w2.ciudad) = LOWER(e.ciudad)
+                         AND REPLACE(LOWER(w2.ciudad), '_', ' ') = REPLACE(LOWER(e.ciudad), '_', ' ')
                    )
             WHERE e.fuente != 'WEATHER'
             """);
