@@ -13,10 +13,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Feeder PredictHQ: captura eventos de todas las ciudades españolas
- * definidas en cities.properties cada 24h y publica en el topic "PredictHQ".
- */
 public class PredictHQController {
 
     private static final String   TOPIC     = "PredictHQ";
@@ -34,13 +30,10 @@ public class PredictHQController {
         System.out.println("[PredictHQController] Iniciado. Topic '" + TOPIC + "' cada " + PERIOD_H + "h.");
     }
 
-    // NUEVO MÉTODO: Ejecuta una sola ciudad al instante (sin temporizador de 24h)
     public void startSingleCity(String ciudadElegida) {
         System.out.println("[PredictHQController] Iniciando búsqueda manual solo para: " + ciudadElegida);
 
-        // Abrimos la conexión con ActiveMQ
         try (ActiveMQPublisher publisher = new ActiveMQPublisher(TOPIC)) {
-            // Llamamos al método que ya tienes para procesar una sola ciudad
             synchronizeCity(ciudadElegida, publisher);
             System.out.println("[PredictHQController] Búsqueda finalizada.");
         } catch (Exception e) {

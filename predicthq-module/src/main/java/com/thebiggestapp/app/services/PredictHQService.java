@@ -13,21 +13,18 @@ public class PredictHQService {
     private final OkHttpClient client = new OkHttpClient();
     private final String token = Config.get("PREDICTHQ_TOKEN");
 
-    // Mapa ordenado: nombre ciudad -> [latitud, longitud, radio_km]
     private final Map<String, double[]> cityCoords = new LinkedHashMap<>();
 
     public PredictHQService() {
         loadCityCoords();
     }
 
-    /** Carga coordenadas desde cities.properties */
     private void loadCityCoords() {
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("cities.properties")) {
             if (input == null) {
                 System.err.println("[PredictHQService] No se encuentra cities.properties");
                 return;
             }
-            // Leer línea a línea para respetar el orden y saltar comentarios
             String content = new String(input.readAllBytes());
             for (String line : content.split("\n")) {
                 line = line.trim();
@@ -48,15 +45,10 @@ public class PredictHQService {
         }
     }
 
-    /** Devuelve la lista de ciudades cargadas desde cities.properties */
     public List<String> getCities() {
         return new ArrayList<>(cityCoords.keySet());
     }
 
-    /**
-     * Busca eventos por radio geográfico: within=30km@lat,lon
-     * Evita resultados fuera de la ciudad buscada.
-     */
     public String fetchEventsJson(String city) throws Exception {
         double[] coords = cityCoords.get(city);
 
@@ -65,12 +57,10 @@ public class PredictHQService {
                 .addQueryParameter("sort", "-rank")
                 .addQueryParameter("limit", "50");
 
-        // --- INICIO DEL FILTRO DE CATEGORÍAS ---
         String categorias = Config.get("PREDICTHQ_CATEGORIES");
         if (categorias != null && !categorias.isEmpty()) {
             urlBuilder.addQueryParameter("category", categorias);
         }
-        // --- FIN DEL FILTRO DE CATEGORÍAS ---
 
         if (coords != null) {
             String within = (int) coords[2] + "km@" + coords[0] + "," + coords[1];
@@ -117,19 +107,16 @@ public class PredictHQService {
 
         double latitud = 0.0, longitud = 0.0;
 
-        // Primero intentamos usar "location", que SIEMPRE es un array simple de [longitud, latitud]
         if (jsonObject.has("location") && !jsonObject.get("location").isJsonNull()) {
             JsonArray loc = jsonObject.getAsJsonArray("location");
             longitud = loc.get(0).getAsDouble();
             latitud  = loc.get(1).getAsDouble();
         }
-        // Si no hay location, intentamos con "geo" pero asegurándonos de que sea un "Point"
         else if (jsonObject.has("geo") && !jsonObject.get("geo").isJsonNull()) {
             JsonObject geo = jsonObject.getAsJsonObject("geo");
             if (geo.has("geometry") && !geo.get("geometry").isJsonNull()) {
                 JsonObject geometry = geo.getAsJsonObject("geometry");
 
-                // Solo extraemos si el tipo de geometría es un punto simple
                 if (geometry.has("type") && "Point".equals(geometry.get("type").getAsString())) {
                     JsonArray coords = geometry.getAsJsonArray("coordinates");
                     longitud = coords.get(0).getAsDouble();

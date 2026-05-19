@@ -6,10 +6,6 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 
 import javax.jms.*;
 
-/**
- * Publica eventos en un topic de ActiveMQ.
- * Uso: instanciar, llamar publish() para cada evento, cerrar con close().
- */
 public class ActiveMQPublisher implements AutoCloseable {
 
     private final Connection connection;
@@ -25,7 +21,6 @@ public class ActiveMQPublisher implements AutoCloseable {
         connection = factory.createConnection();
         connection.start();
 
-        // Session no transaccional, auto-acknowledge
         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
         Topic topic = session.createTopic(topicName);
@@ -35,9 +30,6 @@ public class ActiveMQPublisher implements AutoCloseable {
         System.out.println("[Publisher] Conectado a ActiveMQ. Topic: " + topicName);
     }
 
-    /**
-     * Serializa el evento a JSON y lo envía al topic.
-     */
     public void publish(Event event) throws JMSException {
         String json = event.toJson();
         TextMessage message = session.createTextMessage(json);
