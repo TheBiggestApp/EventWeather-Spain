@@ -17,10 +17,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Feeder Ticketmaster: captura eventos cada 24h y publica en el topic "Ticketmaster".
- * Las ciudades se leen dinámicamente de cities.properties.
- */
 public class TicketmasterController {
 
     private static final String TOPIC     = "Ticketmaster";
@@ -52,7 +48,6 @@ public class TicketmasterController {
     }
 
     private void synchronizeCity(String ciudad, ActiveMQPublisher publisher) throws Exception {
-        // Ticketmaster acepta espacios en la query, así que reemplazamos guion bajo
         String ciudadQuery = ciudad.replace("_", " ");
         System.out.println("[TicketmasterController] Buscando eventos en: " + ciudadQuery);
         JsonArray events = ticketmaster.getEventsArray(ticketmaster.fetchEventsJson(ciudadQuery));
@@ -82,10 +77,6 @@ public class TicketmasterController {
         return new Event(ts, SOURCE_ID, payload);
     }
 
-    /**
-     * Lee cities.properties del classpath y extrae los nombres de ciudad.
-     * Formato: NombreCiudad=lat,lon,radius  (líneas con '#' se ignoran).
-     */
     private static List<String> loadCiudades() {
         List<String> result = new ArrayList<>();
         try (InputStream is = TicketmasterController.class
