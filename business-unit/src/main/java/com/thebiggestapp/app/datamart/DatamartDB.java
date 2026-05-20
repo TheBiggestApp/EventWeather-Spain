@@ -33,9 +33,6 @@ public class DatamartDB {
         return connection;
     }
 
-    // -----------------------------------------------------------------------
-    // Schema - ONE BIG TABLE (OBT)
-    // -----------------------------------------------------------------------
 
     private void initSchema() {
         try (Statement st = connection.createStatement()) {
@@ -64,7 +61,6 @@ public class DatamartDB {
                 )
                 """);
 
-            // Índices para que las búsquedas en la tabla gigante sean rápidas
             st.execute("CREATE INDEX IF NOT EXISTS idx_uni_fuente ON unified_datamart(fuente)");
             st.execute("CREATE INDEX IF NOT EXISTS idx_uni_ciudad ON unified_datamart(ciudad)");
             st.execute("CREATE INDEX IF NOT EXISTS idx_uni_fecha  ON unified_datamart(fecha_inicio)");
@@ -72,10 +68,6 @@ public class DatamartDB {
             throw new IllegalStateException("Error al crear el schema unificado: " + e.getMessage());
         }
     }
-
-    // -----------------------------------------------------------------------
-    // Upserts hacia la tabla unificada
-    // -----------------------------------------------------------------------
 
     public synchronized void upsertWeather(WeatherRecord r) {
         String sql = """
@@ -223,10 +215,6 @@ public class DatamartDB {
         }
     }
 
-    /**
-     * Devuelve lat/lon de un evento concreto (por ciudad + fecha) para poder
-     * consultar la estimación histórica cuando el pronóstico no cubre la fecha.
-     */
     public double[] findLatLonForEvent(String ciudad, String fecha) {
         String sql = "SELECT latitud, longitud FROM unified_datamart " +
                      "WHERE fuente IN ('PREDICTHQ','TICKETMASTER') " +
@@ -244,9 +232,6 @@ public class DatamartDB {
     }
 
     public ResultSet findEventosConClima(String ciudad, String fecha) throws SQLException {
-        // El clima solo cubre el día actual, así que el JOIN intenta primero
-        // por fecha exacta y, si no hay dato de ese día, coge el clima más
-        // reciente disponible para esa ciudad (fallback por ciudad).
         StringBuilder sql = new StringBuilder("""
             SELECT e.id, e.ciudad, e.titulo,
                    e.fecha_inicio, e.fuente,

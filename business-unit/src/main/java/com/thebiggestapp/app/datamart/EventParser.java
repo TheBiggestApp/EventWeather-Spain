@@ -46,8 +46,8 @@ public class EventParser {
                 readDouble(payload, "temp_min"),
                 readDouble(payload, "temp_max"),
                 readString(payload, "descripcion"),
-                readInt(payload,    "humedad"),      // era "humidity" — el JSON usa "humedad"
-                readDouble(payload, "viento_ms"),    // era "wind_speed" — el JSON usa "viento_ms"
+                readInt(payload,    "humedad"),
+                readDouble(payload, "viento_ms"),
                 readString(event,   "ss")
         ));
     }
