@@ -234,7 +234,7 @@ Cada evento JSON tiene la estructura mínima:
 | **Base local** | SQLite (`eventos_phq`) — persistencia de respaldo |
 
 **Clases principales:**
-- `PredictHQController` — Scheduler + modo manual para una sola ciudad
+- `PredictHQController` — Scheduler que captura eventos cada 24 horas y los publica en ActiveMQ.
 - `PredictHQService` — Cliente HTTP con parsing del JSON de la API
 - `EventoPHQ` — Modelo de datos de eventos PredictHQ
 
