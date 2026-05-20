@@ -532,6 +532,34 @@ curl http://localhost:7070/api/analysis/top-cities?limit=10
 ]
 ```
 
+#### Análisis combinado clima + eventos de una ciudad
+```bash
+curl http://localhost:7070/api/analysis/weather-vs-events/Madrid
+```
+```json
+{
+  "clima": [
+    {
+      "id": "W_Madrid_2026-05-19T12:00:00Z",
+      "fuente": "WEATHER",
+      "ciudad": "Madrid",
+      "titulo": "clear sky",
+      "temperatura": 24.3,
+      "temp_min": 18.1,
+      "temp_max": 27.8,
+      "humidity": 32,
+      "wind_speed": 3.5
+    }
+  ],
+  "eventos_predicthq": [
+    { "ciudad": "Madrid", "titulo": "Concierto Rock", "impacto": 72 }
+  ],
+  "eventos_ticketmaster": [
+    { "ciudad": "Madrid", "titulo": "Musical Hamilton", "venue": "Teatro Real" }
+  ]
+}
+```
+
 #### Eventos enriquecidos con clima (JOIN)
 ```bash
 curl "http://localhost:7070/api/analysis/events-with-weather?ciudad=Sevilla&fecha=2026-05-19"
@@ -556,6 +584,8 @@ curl "http://localhost:7070/api/analysis/events-with-weather?ciudad=Sevilla&fech
 ```
 
 > **Nota:** El endpoint `events-with-weather` expone los campos `id`, `ciudad`, `titulo`, `fecha_inicio`, `fuente`, y los datos de clima (`temperatura`, `temp_min`, `temp_max`, `humedad`, `viento`, `tiempo`). Los campos `impacto`, `venue` y `url` existen en la tabla `unified_datamart` pero **no se proyectan en este JOIN** por diseño.
+> 
+> El servidor añade dinámicamente el campo `weather_state` (`PRONOSTICO_CONFIRMADO` / `TENDENCIA_GENERAL` / `PREDICCION_HISTORICA`) y, cuando aplica, un campo `weather_warning` con un aviso textual sobre la fiabilidad del dato meteorológico. Para eventos con `PREDICCION_HISTORICA`, los datos de clima se estiman mediante la API Open-Meteo Archive si no hay datos reales disponibles.
 
 #### Eventos por categoría
 ```bash
