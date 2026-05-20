@@ -199,6 +199,10 @@ Cada evento JSON tiene la estructura mínima:
 - `BusinessUnitSubscriber` — Suscriptor durable con reconexión exponencial
 - `ActiveMQSubscriber` — Suscriptor no-durable (alternativo)
 
+**Servicios (`services/`):**
+- `HistoricalWeatherService` — Estimación meteorológica basada en medias históricas de los últimos 5 años usando la API Open-Meteo Archive. Consulta datos de temperatura y precipitación de la misma fecha en años anteriores para generar una predicción aproximada. Incluye resolución de coordenadas por ciudad a partir de `cities.properties`.
+- `EventWeatherState` — Clasificador del estado de predicción meteorológica según la distancia temporal al evento: `PRONOSTICO_CONFIRMADO` (< 5 días), `TENDENCIA_GENERAL` (5–14 días) o `PREDICCION_HISTORICA` (> 14 días).
+
 **Records (DTOs):**
 - `WeatherRecord` — Datos meteorológicos
 - `PredictHQRecord` — Datos de eventos PredictHQ
@@ -388,19 +392,16 @@ La API se expone en `http://localhost:7070` y devuelve JSON.
 
 ```bash
 # Estado del datamart
-curl http://localhost:7070/api/status
+http://localhost:7070/api/status
 
 # Clima en Madrid
-curl http://localhost:7070/api/weather/Madrid
-
-# Eventos con impacto > 50 en Barcelona
-curl "http://localhost:7070/api/events/impact?min=50&ciudad=Barcelona"
+http://localhost:7070/api/weather/Madrid
 
 # Top 10 ciudades con más eventos
-curl "http://localhost:7070/api/analysis/top-cities?limit=10"
+http://localhost:7070/api/analysis/top-cities?limit=10
 
-# Eventos con clima para Sevilla hoy
-curl "http://localhost:7070/api/analysis/events-with-weather?ciudad=Sevilla&fecha=2026-05-19"
+# Eventos con clima para Sevilla en un día especifico
+http://localhost:7070/api/analysis/events-with-weather?ciudad=Sevilla&fecha=2026-05-19
 ```
 
 ---
@@ -428,9 +429,6 @@ El datamart usa una única tabla `unified_datamart` que almacena los tres tipos 
 | `temp_max` | REAL | Weather |
 | `wind_speed` | REAL | Weather |
 | `humidity` | INTEGER | Weather |
-| `impacto` | INTEGER | PredictHQ |
-| `venue` | TEXT | Ticketmaster |
-| `url` | TEXT | Ticketmaster |
 | `ss` | TEXT | Todas |
 
 **Índices:** `fuente`, `ciudad`, `fecha_inicio`
@@ -543,6 +541,8 @@ EventWeather-Spain/
         ├── datamart/PredictHQRecord.java
         ├── datamart/TicketmasterRecord.java
         ├── datamart/WeatherRecord.java
+        ├── services/EventWeatherState.java
+        ├── services/HistoricalWeatherService.java
         ├── store/EventStoreReader.java
         └── subscriber/BusinessUnitSubscriber.java
 ```
