@@ -12,12 +12,6 @@ public class OpenWeatherService {
     private final OkHttpClient client = new OkHttpClient();
     private final String key = Config.get("OPENWEATHER_KEY");
 
-    /**
-     * Devuelve las predicciones de los próximos 5 días para una ciudad,
-     * en intervalos de 3 horas (máximo ~40 entradas).
-     *
-     * Si quieres limitar a las próximas 24 h, añade "&cnt=8" a la URL.
-     */
     public List<Clima> getForecastPorCiudad(String ciudad) throws Exception {
         String url = "https://api.openweathermap.org/data/2.5/forecast?q="
                 + ciudad + ",ES&appid=" + key + "&units=metric&lang=es";
