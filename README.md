@@ -199,6 +199,10 @@ Cada evento JSON tiene la estructura mínima:
 - `BusinessUnitSubscriber` — Suscriptor durable con reconexión exponencial
 - `ActiveMQSubscriber` — Suscriptor no-durable (alternativo)
 
+**Servicios (`services/`):**
+- `HistoricalWeatherService` — Estimación meteorológica basada en medias históricas de los últimos 5 años usando la API Open-Meteo Archive. Consulta datos de temperatura y precipitación de la misma fecha en años anteriores para generar una predicción aproximada. Incluye resolución de coordenadas por ciudad a partir de `cities.properties`.
+- `EventWeatherState` — Clasificador del estado de predicción meteorológica según la distancia temporal al evento: `PRONOSTICO_CONFIRMADO` (< 5 días), `TENDENCIA_GENERAL` (5–14 días) o `PREDICCION_HISTORICA` (> 14 días).
+
 **Records (DTOs):**
 - `WeatherRecord` — Datos meteorológicos
 - `PredictHQRecord` — Datos de eventos PredictHQ
@@ -537,6 +541,8 @@ EventWeather-Spain/
         ├── datamart/PredictHQRecord.java
         ├── datamart/TicketmasterRecord.java
         ├── datamart/WeatherRecord.java
+        ├── services/EventWeatherState.java
+        ├── services/HistoricalWeatherService.java
         ├── store/EventStoreReader.java
         └── subscriber/BusinessUnitSubscriber.java
 ```
