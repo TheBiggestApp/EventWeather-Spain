@@ -3,14 +3,11 @@ target/
 build/
 bin/
 
-**/config.properties
+openweather-module/**/config.properties
+ticketmaster-module/**/config.properties
+predicthq-module/**/config.properties
 
 .idea/
 .vscode/
 *.iml
 
-eventstore/
-*.events
-
-# Mac
-.DS_Store
