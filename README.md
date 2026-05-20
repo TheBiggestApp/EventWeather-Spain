@@ -523,26 +523,81 @@ GET http://localhost:7070/api/analysis/top-cities?limit=10
 ```
 ```json
 [
-  { "ciudad": "Madrid",    "total_eventos": 312 },
-  { "ciudad": "Barcelona", "total_eventos": 287 },
-  { "ciudad": "Sevilla",   "total_eventos": 145 }
+  {
+    "ciudad": "Vigo",
+    "avg_impacto": 19.6,
+    "total_eventos": 50
+  },
+  {
+    "ciudad": "Valencia",
+    "avg_impacto": 21.9,
+    "total_eventos": 50
+  },
+  {
+    "ciudad": "Tarragona",
+    "avg_impacto": 20,
+    "total_eventos": 50
+  },
+  {
+    "ciudad": "Santa_Coloma_de_Gramenet",
+    "avg_impacto": 0,
+    "total_eventos": 50
+  },
+  {
+    "ciudad": "Pozuelo_de_Alarcon",
+    "avg_impacto": 9.12,
+    "total_eventos": 50
+  },
+  {
+    "ciudad": "Melilla",
+    "avg_impacto": 20,
+    "total_eventos": 50
+  },
+  {
+    "ciudad": "Jerez_de_la_Frontera",
+    "avg_impacto": 19.2,
+    "total_eventos": 50
+  },
+  {
+    "ciudad": "Granada",
+    "avg_impacto": 19.6,
+    "total_eventos": 50
+  },
+  {
+    "ciudad": "Ferrol",
+    "avg_impacto": 20,
+    "total_eventos": 50
+  },
+  {
+    "ciudad": "Elche",
+    "avg_impacto": 21.28,
+    "total_eventos": 50
+  }
 ]
 ```
 
 #### Eventos enriquecidos con clima (JOIN)
 ```bash
-GET http://localhost:7070/api/analysis/events-with-weather?ciudad=Sevilla&fecha=2026-05-19
+GET http://localhost:7070/api/analysis/events-with-weather?ciudad=Madrid&fecha=2026-09-26
 ```
 ```json
 [
   {
-    "ciudad": "Sevilla",
-    "titulo": "Feria de Abril",
-    "categoria": "festivals",
-    "fecha_inicio": "2026-05-19",
-    "temperatura": 31.2,
-    "descripcion_clima": "sunny",
-    "rank": 85
+    "fecha_inicio": "2026-09-26 20:30:00",
+    "viento": 7.67,
+    "weather_warning": "Estimación basada en medias históricas de los últimos 5 años. Precisión limitada.",
+    "fuente": "TICKETMASTER",
+    "titulo": "SHAKIRA - LAS MUJERES YA NO LLORAN - RESIDENCIA EUROPEA",
+    "temp_max": 24.6,
+    "muestras_historicas": 5,
+    "temp_min": 12.4,
+    "tiempo": "templado, cielo despejado",
+    "ciudad": "Madrid",
+    "weather_state": "PREDICCION_HISTORICA",
+    "precip_media_mm": 0.1,
+    "id": "Z698xZ2qZ16vowfF-f",
+    "temperatura": 18.5,
+    "humedad": 51
   }
 ]
 ```
