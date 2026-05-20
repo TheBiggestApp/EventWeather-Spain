@@ -130,7 +130,6 @@ El sistema sigue una **arquitectura dirigida por eventos (Event-Driven Architect
 
 ### Arquitectura de la Aplicación
 
-Each module follows a consistent internal layered architecture:
 
 ```
 ┌──────────────────────────────────────────────────────┐
