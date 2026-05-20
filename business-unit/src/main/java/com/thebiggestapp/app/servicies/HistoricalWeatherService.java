@@ -1,4 +1,4 @@
-package com.thebiggestapp.app.services;
+package com.thebiggestapp.app.servicies;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

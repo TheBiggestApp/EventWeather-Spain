@@ -1,4 +1,4 @@
-package com.thebiggestapp.app.services;
+package com.thebiggestapp.app.servicies;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
