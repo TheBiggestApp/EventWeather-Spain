@@ -146,9 +146,6 @@ public class DatamartDB {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Queries filtradas por la columna 'fuente'
-    // -----------------------------------------------------------------------
 
     public ResultSet findAllWeather() throws SQLException {
         return connection.createStatement()
@@ -213,9 +210,6 @@ public class DatamartDB {
         return ps.executeQuery();
     }
 
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
 
     private Connection openConnection(String dbPath) {
         try {
@@ -272,7 +266,7 @@ public class DatamartDB {
             WHERE e.fuente != 'WEATHER'
             """);
 
-        if (ciudad != null) sql.append(" AND LOWER(e.ciudad) = LOWER(?)");
+        if (ciudad != null) sql.append(" AND REPLACE(LOWER(e.ciudad), '_', ' ') = REPLACE(LOWER(?), '_', ' ')");
         if (fecha  != null) sql.append(" AND DATE(e.fecha_inicio) = ?");
         sql.append(" ORDER BY e.fecha_inicio ASC LIMIT 200");
 

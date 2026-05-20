@@ -1,18 +1,14 @@
-# Ignorar carpetas de compilación (TODAS)
 target/
 **/target/
 build/
 bin/
 
-# Ignorar TODOS los archivos de configuración con secretos
 **/config.properties
 
-# Ignorar IDEs
 .idea/
 .vscode/
 *.iml
 
-# Datos del Sprint 2
 eventstore/
 *.events
 
