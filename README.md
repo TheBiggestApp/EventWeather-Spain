@@ -7,8 +7,10 @@ Sistema distribuido basado en eventos para la captura, almacenamiento y consulta
 ## Tabla de Contenidos
 
 - [Descripción General](#descripción-general)
+- [Justificación de APIs y Estructura del Datamart](#justificación-de-apis-y-estructura-del-datamart)
 - [Arquitectura](#arquitectura)
   - [Diagrama de Componentes](#diagrama-de-componentes)
+  - [Arquitectura de la Aplicación](#arquitectura-de-la-aplicación)
   - [Flujo de Datos](#flujo-de-datos)
 - [Módulos](#módulos)
   - [openweather-module](#openweather-module)
@@ -17,6 +19,7 @@ Sistema distribuido basado en eventos para la captura, almacenamiento y consulta
   - [event-store-builder](#event-store-builder)
   - [business-unit](#business-unit)
 - [Tecnologías Utilizadas](#tecnologías-utilizadas)
+- [Principios y Patrones de Diseño](#principios-y-patrones-de-diseño)
 - [Requisitos Previos](#requisitos-previos)
 - [Instalación y Configuración](#instalación-y-configuración)
   - [1. Clonar el Repositorio](#1-clonar-el-repositorio)
@@ -45,6 +48,46 @@ EventWeather Spain es una plataforma de datos que:
 3. **Persiste** cada evento de forma inmutable en un Event Store basado en ficheros (NDJSON).
 4. **Construye un datamart** (SQLite) con una tabla unificada tipo OBT (One Big Table) que centraliza todos los datos.
 5. **Expone una API REST** (Javalin, puerto 7070) para consultar y cruzar datos de clima y eventos.
+
+---
+
+## Justificación de APIs y Estructura del Datamart
+
+### Elección de APIs Externas
+
+#### OpenWeather — Current Weather API
+
+Se eligió OpenWeather por ser la API meteorológica de mayor adopción en entornos de desarrollo gracias a su plan gratuito funcional y su cobertura global. Para el objetivo del proyecto —monitorizar el tiempo en 112 ciudades españolas— ofrece todos los campos necesarios (temperatura, viento, humedad, descripción textual) con una latencia baja y una estructura JSON estable. Se descartaron alternativas como **AEMET** (sin SDK oficial) o **WeatherAPI** (campos inconsistentes en el plan gratuito).
+
+**Frecuencia de captura: 6 horas.** El clima en España cambia a escala horaria en períodos de inestabilidad, pero el equilibrio entre coste de peticiones (límite API) y fidelidad de los datos hace que una captura cada 6 horas sea suficiente para el análisis combinado con eventos culturales, que suelen tener una granularidad diaria.
+
+#### PredictHQ — Events Intelligence API
+
+PredictHQ especializa su modelo de datos en el **impacto cuantificado de eventos** sobre una ubicación geográfica. A diferencia de Ticketmaster (orientado a la venta de entradas) o Eventbrite (solo eventos comerciales), PredictHQ agrega fuentes heterogéneas —deportes, conferencias, festivales, ferias, conciertos— y asigna un `rank` de impacto (0–100) que permite analizar qué eventos movilizan más personas. La búsqueda por radio geográfico (`within=Xkm@lat,lon`) encaja perfectamente con la estructura de ciudad+coordenadas del sistema.
+
+#### Ticketmaster — Discovery API
+
+Ticketmaster complementa a PredictHQ cubriendo el segmento de **entretenimiento comercial** (conciertos, musicales, eventos deportivos de taquilla) con datos de disponibilidad real de entradas. Dado que PredictHQ puede no tener eventos muy locales o de pequeño formato, Ticketmaster actúa como segunda fuente para enriquecer el catálogo de eventos. Su API Discovery es gratuita, bien documentada y sin límite de resultados relevante para el volumen del proyecto.
+
+---
+
+### Estructura del Datamart
+
+#### Decisión: One Big Table (OBT) en SQLite
+
+El datamart adopta el patrón **One Big Table (OBT)**: una única tabla `unified_datamart` que consolida datos de las tres fuentes bajo un esquema común. Esta decisión se tomó por las siguientes razones:
+
+| Criterio | OBT (elegido) | Esquema estrella normalizado |
+|----------|--------------|-----------------------------|
+| **Complejidad de JOINs** | Sin joins — lecturas directas | JOINs entre 3-4 tablas para cada consulta |
+| **Velocidad de consulta** | Alta (un solo scan) | Media (joins costosos sin índices optimizados) |
+| **Heterogeneidad de datos** | Los campos no comunes quedan `NULL` — aceptable | Requiere tablas separadas o columnas polimórficas |
+| **Escalabilidad del equipo** | Una sola migración de esquema | Varias migraciones coordinadas |
+| **Objetivo del sistema** | Análisis exploratorio y API REST | OLTP transaccional (no aplica) |
+
+**SQLite** se eligió como motor de base de datos embebido para evitar la dependencia de un servidor de base de datos externo (PostgreSQL, MySQL), manteniendo el sistema autocontenido y reproducible en cualquier entorno. Para el volumen esperado (< 1 M de filas), SQLite ofrece rendimiento suficiente.
+
+**Índices creados:** `fuente`, `ciudad`, `fecha_inicio` — los tres filtros más usados en los endpoints REST.
 
 ---
 
@@ -83,6 +126,58 @@ El sistema sigue una **arquitectura dirigida por eventos (Event-Driven Architect
 │ {topic}/{ss}/     │  │  EventStoreReader (carga histórico)         │
 │  {YYYYMMDD}.events│  └──────────────────────────────────────────────┘
 └───────────────────┘
+```
+
+### Arquitectura de la Aplicación
+
+Each module follows a consistent internal layered architecture:
+
+```
+┌──────────────────────────────────────────────────────┐
+│                    MÓDULOS FEEDER                    │
+│  (openweather-module / predicthq-module /            │
+│   ticketmaster-module)                               │
+│                                                      │
+│  ┌──────────┐   ┌──────────┐   ┌────────────────┐   │
+│  │ Scheduler│──▶│  Service │──▶│ ActiveMQPublish│   │
+│  │(Controller│  │ (HTTP +  │   │  (JMS/Topic)   │   │
+│  │ @Scheduled)  │  Parser) │   └────────────────┘   │
+│  └──────────┘   └────┬─────┘                        │
+│                      │ persist                       │
+│                 ┌────▼─────┐                         │
+│                 │ SQLite DB│ (respaldo local)         │
+│                 └──────────┘                         │
+└──────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────┐
+│                  BUSINESS-UNIT                       │
+│                                                      │
+│  ┌────────────────────────────────┐                  │
+│  │  Subscriber (JMS / durable)    │                  │
+│  └───────────────┬────────────────┘                  │
+│                  │ onMessage                         │
+│  ┌───────────────▼────────────────┐                  │
+│  │  EventParser                   │  ← routing layer │
+│  │  (Weather / PredictHQ / TM)    │                  │
+│  └───────────────┬────────────────┘                  │
+│                  │ insert                            │
+│  ┌───────────────▼────────────────┐                  │
+│  │  DatamartDB (Singleton)        │  ← persistence   │
+│  │  SQLite — unified_datamart     │                  │
+│  └───────────────────────────────┘                  │
+│                                                      │
+│  ┌─────────────────────────────────────────────┐     │
+│  │  RestApi (Javalin :7070)                    │     │
+│  │  ┌──────────────────────────────────────┐   │     │
+│  │  │ /api/weather  /api/events  /api/...  │   │     │
+│  │  └──────────────────────────────────────┘   │     │
+│  │  ResultSetMapper → JSON                     │     │
+│  └─────────────────────────────────────────────┘     │
+│                                                      │
+│  Services:                                           │
+│  ├── HistoricalWeatherService (Open-Meteo Archive)   │
+│  └── EventWeatherState (predicción por distancia)    │
+└──────────────────────────────────────────────────────┘
 ```
 
 ### Flujo de Datos
@@ -390,18 +485,82 @@ La API se expone en `http://localhost:7070` y devuelve JSON.
 
 ### Ejemplos de Uso
 
+#### Estado del datamart
 ```bash
-# Estado del datamart
-http://localhost:7070/api/status
+GET http://localhost:7070/api/status
+```
+```json
+{
+  "total": 3540,
+  "WEATHER": 1120,
+  "PREDICTHQ": 1890,
+  "TICKETMASTER": 530
+}
+```
 
-# Clima en Madrid
-http://localhost:7070/api/weather/Madrid
+#### Clima actual en Madrid
+```bash
+GET http://localhost:7070/api/weather/Madrid
+```
+```json
+[
+  {
+    "ciudad": "Madrid",
+    "titulo": "clear sky",
+    "temperatura": 24.3,
+    "temp_min": 18.1,
+    "temp_max": 27.8,
+    "humidity": 32,
+    "wind_speed": 3.5,
+    "ts": "2026-05-19T12:00:00Z"
+  }
+]
+```
 
-# Top 10 ciudades con más eventos
-http://localhost:7070/api/analysis/top-cities?limit=10
+#### Top 10 ciudades con más actividad
+```bash
+GET http://localhost:7070/api/analysis/top-cities?limit=10
+```
+```json
+[
+  { "ciudad": "Madrid",    "total_eventos": 312 },
+  { "ciudad": "Barcelona", "total_eventos": 287 },
+  { "ciudad": "Sevilla",   "total_eventos": 145 }
+]
+```
 
-# Eventos con clima para Sevilla en un día especifico
-http://localhost:7070/api/analysis/events-with-weather?ciudad=Sevilla&fecha=2026-05-19
+#### Eventos enriquecidos con clima (JOIN)
+```bash
+GET http://localhost:7070/api/analysis/events-with-weather?ciudad=Sevilla&fecha=2026-05-19
+```
+```json
+[
+  {
+    "ciudad": "Sevilla",
+    "titulo": "Feria de Abril",
+    "categoria": "festivals",
+    "fecha_inicio": "2026-05-19",
+    "temperatura": 31.2,
+    "descripcion_clima": "sunny",
+    "rank": 85
+  }
+]
+```
+
+#### Eventos por categoría
+```bash
+GET http://localhost:7070/api/events/category/concerts
+```
+```json
+[
+  {
+    "ciudad": "Barcelona",
+    "titulo": "Primavera Sound 2026",
+    "fecha_inicio": "2026-05-29",
+    "fecha_fin": "2026-06-02",
+    "rank": 92
+  }
+]
 ```
 
 ---
@@ -472,6 +631,54 @@ Sevilla=37.3891,-5.9845,30
 - El radio (en km) se usa para búsquedas geográficas en PredictHQ
 
 Las ciudades están organizadas por comunidad autónoma e incluyen las capitales de provincia y las principales ciudades de cada región.
+
+---
+
+## Principios y Patrones de Diseño
+
+### Patrones Arquitectónicos Globales
+
+| Patrón | Descripción | Dónde se aplica |
+|--------|-------------|------------------|
+| **Event-Driven Architecture (EDA)** | Los módulos se comunican exclusivamente a través de eventos publicados en topics de ActiveMQ. Ningún módulo llama directamente a otro. | Todo el sistema |
+| **CQRS simplificado** | Los feeders solo escriben (comandos); la business-unit solo lee y sirve datos (queries). Las responsabilidades de escritura y lectura están separadas en módulos distintos. | Feeders vs. business-unit |
+| **Event Sourcing (parcial)** | Cada evento publicado se persiste de forma inmutable en el Event Store antes de ser procesado. Esto permite reconstruir el estado del datamart desde cero relanzando los `.events`. | event-store-builder |
+| **One Big Table (OBT)** | El datamart agrupa datos heterogéneos (clima, PredictHQ, Ticketmaster) en una única tabla con columnas `NULL` para campos no aplicables, simplificando las consultas analíticas. | DatamartDB |
+
+---
+
+### Patrones por Módulo
+
+#### openweather-module / predicthq-module / ticketmaster-module
+
+| Patrón | Implementación |
+|--------|----------------|
+| **Scheduler (Active Object)** | `WeatherController`, `PredictHQController` y `TicketmasterController` usan `ScheduledExecutorService` para ejecutar la captura periódicamente sin bloquear el hilo principal. |
+| **Service Layer** | `OpenWeatherService`, `PredictHQService` y `TicketmasterService` encapsulan toda la lógica de comunicación HTTP (OkHttp) y el parsing JSON (Gson), desacoplándola del scheduler. |
+| **Publisher-Subscriber** | `ActiveMQPublisher` publica mensajes JMS en un topic sin conocer quién los consume (desacoplamiento total). |
+| **Repository (SQLite local)** | `DatabaseManager` actúa como repositorio de respaldo local, aislando la lógica de persistencia de la lógica de negocio. |
+| **Value Object / Model** | `Clima`, `EventoPHQ` y `Evento` son modelos de datos inmutables que transportan los datos parseados entre capas. |
+
+#### event-store-builder
+
+| Patrón | Implementación |
+|--------|----------------|
+| **Durable Subscriber** | `EventStoreSubscriber` usa suscripciones JMS durables (`createDurableSubscriber`) para garantizar que ningún evento se pierde aunque el módulo esté detenido temporalmente. |
+| **Append-Only Log** | `EventStore` escribe cada evento como una nueva línea al final del fichero `.events` correspondiente. Nunca modifica ni elimina líneas existentes, garantizando inmutabilidad. |
+| **Strategy (ruta de almacenamiento)** | La ruta `eventstore/{topic}/{ss}/{YYYYMMDD}.events` encapsula la estrategia de particionado por topic, fuente y fecha, facilitando búsquedas históricas eficientes. |
+
+#### business-unit
+
+| Patrón | Implementación |
+|--------|----------------|
+| **Singleton** | `DatamartDB` implementa el patrón Singleton para garantizar una única conexión SQLite compartida por todos los componentes, evitando conflictos de concurrencia en escrituras. |
+| **Router / Chain of Responsibility** | `EventParser` examina el campo `ss` de cada evento y delega el parsing al parser concreto (`WeatherRecord`, `PredictHQRecord` o `TicketmasterRecord`). Añadir una nueva fuente solo requiere extender el router. |
+| **DTO (Data Transfer Object)** | `WeatherRecord`, `PredictHQRecord` y `TicketmasterRecord` son Java Records que actúan como DTOs inmutables para transferir datos parseados desde los eventos JSON al datamart. |
+| **Mapper** | `ResultSetMapper` transforma los `ResultSet` JDBC en listas de `Map<String, Object>` serializables a JSON por Javalin, desacoplando la capa de persistencia de la capa de presentación HTTP. |
+| **Exponential Backoff (Retry)** | `BusinessUnitSubscriber` implementa reconexión automática con espera exponencial ante fallos de conexión con ActiveMQ, aumentando la resiliencia del sistema. |
+| **Batch Loader** | `EventStoreReader` carga en bloque todos los ficheros `.events` existentes al arrancar la business-unit, garantizando que el datamart refleja el histórico completo antes de servir peticiones. |
+| **State (clasificador)** | `EventWeatherState` encapsula la lógica de transición entre los estados `PRONOSTICO_CONFIRMADO`, `TENDENCIA_GENERAL` y `PREDICCION_HISTORICA` según la distancia temporal al evento, aislando las reglas de negocio de clasificación. |
+| **Facade** | `HistoricalWeatherService` actúa como fachada frente a la API Open-Meteo Archive, ocultando la complejidad de construcción de URLs, petición HTTP, parsing y cálculo de medias históricas. |
 
 ---
 
