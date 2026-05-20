@@ -31,6 +31,7 @@ Sistema distribuido basado en eventos para la captura, almacenamiento y consulta
   - [Orden de Arranque](#orden-de-arranque)
   - [Ejecutar cada Módulo](#ejecutar-cada-módulo)
 - [API REST — Endpoints](#api-rest--endpoints)
+  - [Endpoint de depuración](#endpoint-de-depuración)
 - [Modelo de Datos](#modelo-de-datos)
   - [Tabla Unificada (OBT)](#tabla-unificada-obt)
   - [Event Store (Sistema de Ficheros)](#event-store-sistema-de-ficheros)
@@ -284,15 +285,15 @@ Cada evento JSON tiene la estructura mínima:
 | **Arranque** | Carga histórico del Event Store + suscripción en tiempo real |
 
 **Clases principales:**
-- `Main` — Punto de entrada: carga histórico, arranca API, conecta al broker
-- `RestApi` — Definición de 10 endpoints REST
+- `Main` — Punto de entrada: carga histórico (`EventStoreReader`), arranca API REST y conecta al broker vía `ActiveMQSubscriber`
+- `RestApi` — Definición de 11 endpoints REST (incluye `/api/debug/ciudades`)
 - `ResultSetMapper` — Convierte ResultSets SQL a listas de mapas (JSON-ready)
 - `EventParser` — Router que clasifica y parsea eventos de las tres fuentes
 - `DatamartDB` — Singleton con la conexión SQLite y todas las queries
 - `CityResolver` — Resolución inversa de coordenadas a nombre de ciudad
 - `EventStoreReader` — Carga batch de ficheros `.events` al arrancar
-- `BusinessUnitSubscriber` — Suscriptor durable con reconexión exponencial
-- `ActiveMQSubscriber` — Suscriptor no-durable (alternativo)
+- `ActiveMQSubscriber` — Suscriptor JMS activo en el arranque (usado por `Main`)
+- `BusinessUnitSubscriber` — Suscriptor durable alternativo con reconexión exponencial (no usado en el arranque por defecto)
 
 **Servicios (`services/`):**
 - `HistoricalWeatherService` — Estimación meteorológica basada en medias históricas de los últimos 5 años usando la API Open-Meteo Archive. Consulta datos de temperatura y precipitación de la misma fecha en años anteriores para generar una predicción aproximada. Incluye resolución de coordenadas por ciudad a partir de `cities.properties`.
@@ -472,39 +473,41 @@ La API se expone en `http://localhost:7070` y devuelve JSON.
 | Método | Endpoint | Descripción | Parámetros |
 |--------|----------|-------------|------------|
 | GET | `/` | Lista de endpoints disponibles | — |
-| GET | `/api/status` | Resumen del datamart (registros por fuente) | — |
+| GET | `/api/status` | Resumen del datamart (registros por fuente, devuelve lista) | — |
 | GET | `/api/weather` | Todo el clima almacenado | — |
 | GET | `/api/weather/{ciudad}` | Clima filtrado por ciudad | `ciudad` (path) |
 | GET | `/api/events/impact` | Eventos PredictHQ por impacto mínimo | `min` (query, default 0), `ciudad` (query, opcional) |
 | GET | `/api/events/categories` | Categorías PredictHQ con totales y media de impacto | — |
 | GET | `/api/events/category/{cat}` | Eventos PredictHQ filtrados por categoría | `cat` (path) |
 | GET | `/api/events/entertainment` | Eventos Ticketmaster | `ciudad` (query, opcional), `fecha` (query, opcional) |
-| GET | `/api/analysis/top-cities` | Ciudades con más actividad | `limit` (query, default 5) |
+| GET | `/api/analysis/top-cities` | Ciudades PredictHQ con más actividad | `limit` (query, default 5) |
 | GET | `/api/analysis/weather-vs-events/{ciudad}` | Análisis combinado: clima + todos los eventos de una ciudad | `ciudad` (path) |
 | GET | `/api/analysis/events-with-weather` | Eventos enriquecidos con datos de clima (JOIN) | `ciudad` (query, opcional), `fecha` (query, YYYY-MM-DD, opcional) |
+| GET | `/api/debug/ciudades` | **Debug** — recuento de registros agrupado por fuente y ciudad | — |
 
 ### Ejemplos de Uso
 
 #### Estado del datamart
 ```bash
-GET http://localhost:7070/api/status
+curl http://localhost:7070/api/status
 ```
 ```json
-{
-  "total": 3540,
-  "WEATHER": 1120,
-  "PREDICTHQ": 1890,
-  "TICKETMASTER": 530
-}
+[
+  { "tabla": "WEATHER",      "total": 1120 },
+  { "tabla": "PREDICTHQ",    "total": 1890 },
+  { "tabla": "TICKETMASTER", "total": 530  }
+]
 ```
 
 #### Clima actual en Madrid
 ```bash
-GET http://localhost:7070/api/weather/Madrid
+curl http://localhost:7070/api/weather/Madrid
 ```
 ```json
 [
   {
+    "id": "W_Madrid_2026-05-19T12:00:00Z",
+    "fuente": "WEATHER",
     "ciudad": "Madrid",
     "titulo": "clear sky",
     "temperatura": 24.3,
@@ -517,39 +520,46 @@ GET http://localhost:7070/api/weather/Madrid
 ]
 ```
 
-#### Top 10 ciudades con más actividad
+#### Top 10 ciudades con más actividad (PredictHQ)
 ```bash
-GET http://localhost:7070/api/analysis/top-cities?limit=10
+curl http://localhost:7070/api/analysis/top-cities?limit=10
 ```
 ```json
 [
-  { "ciudad": "Madrid",    "total_eventos": 312 },
-  { "ciudad": "Barcelona", "total_eventos": 287 },
-  { "ciudad": "Sevilla",   "total_eventos": 145 }
+  { "ciudad": "Madrid",    "total_eventos": 312, "avg_impacto": 54.2 },
+  { "ciudad": "Barcelona", "total_eventos": 287, "avg_impacto": 61.8 },
+  { "ciudad": "Sevilla",   "total_eventos": 145, "avg_impacto": 48.5 }
 ]
 ```
 
 #### Eventos enriquecidos con clima (JOIN)
 ```bash
-GET http://localhost:7070/api/analysis/events-with-weather?ciudad=Sevilla&fecha=2026-05-19
+curl "http://localhost:7070/api/analysis/events-with-weather?ciudad=Sevilla&fecha=2026-05-19"
 ```
 ```json
 [
   {
+    "id": "phq-abc123",
     "ciudad": "Sevilla",
     "titulo": "Feria de Abril",
-    "categoria": "festivals",
     "fecha_inicio": "2026-05-19",
+    "fuente": "PREDICTHQ",
     "temperatura": 31.2,
-    "descripcion_clima": "sunny",
-    "rank": 85
+    "temp_min": 28.0,
+    "temp_max": 34.5,
+    "humedad": 28,
+    "viento": 2.1,
+    "tiempo": "sunny",
+    "weather_state": "PRONOSTICO_CONFIRMADO"
   }
 ]
 ```
 
+> **Nota:** El endpoint `events-with-weather` expone los campos `id`, `ciudad`, `titulo`, `fecha_inicio`, `fuente`, y los datos de clima (`temperatura`, `temp_min`, `temp_max`, `humedad`, `viento`, `tiempo`). Los campos `impacto`, `venue` y `url` existen en la tabla `unified_datamart` pero **no se proyectan en este JOIN** por diseño.
+
 #### Eventos por categoría
 ```bash
-GET http://localhost:7070/api/events/category/concerts
+curl http://localhost:7070/api/events/category/concerts
 ```
 ```json
 [
@@ -558,8 +568,20 @@ GET http://localhost:7070/api/events/category/concerts
     "titulo": "Primavera Sound 2026",
     "fecha_inicio": "2026-05-29",
     "fecha_fin": "2026-06-02",
-    "rank": 92
+    "impacto": 92
   }
+]
+```
+
+#### Depuración: registros por fuente y ciudad
+```bash
+curl http://localhost:7070/api/debug/ciudades
+```
+```json
+[
+  { "fuente": "PREDICTHQ",    "ciudad": "Madrid",    "total": 312 },
+  { "fuente": "TICKETMASTER", "ciudad": "Barcelona", "total": 47  },
+  { "fuente": "WEATHER",      "ciudad": "Sevilla",   "total": 8   }
 ]
 ```
 
@@ -588,6 +610,9 @@ El datamart usa una única tabla `unified_datamart` que almacena los tres tipos 
 | `temp_max` | REAL | Weather |
 | `wind_speed` | REAL | Weather |
 | `humidity` | INTEGER | Weather |
+| `impacto` | INTEGER | PredictHQ |
+| `venue` | TEXT | Ticketmaster |
+| `url` | TEXT | Ticketmaster |
 | `ss` | TEXT | Todas |
 
 **Índices:** `fuente`, `ciudad`, `fecha_inicio`
@@ -675,9 +700,9 @@ Las ciudades están organizadas por comunidad autónoma e incluyen las capitales
 | **Router / Chain of Responsibility** | `EventParser` examina el campo `ss` de cada evento y delega el parsing al parser concreto (`WeatherRecord`, `PredictHQRecord` o `TicketmasterRecord`). Añadir una nueva fuente solo requiere extender el router. |
 | **DTO (Data Transfer Object)** | `WeatherRecord`, `PredictHQRecord` y `TicketmasterRecord` son Java Records que actúan como DTOs inmutables para transferir datos parseados desde los eventos JSON al datamart. |
 | **Mapper** | `ResultSetMapper` transforma los `ResultSet` JDBC en listas de `Map<String, Object>` serializables a JSON por Javalin, desacoplando la capa de persistencia de la capa de presentación HTTP. |
-| **Exponential Backoff (Retry)** | `BusinessUnitSubscriber` implementa reconexión automática con espera exponencial ante fallos de conexión con ActiveMQ, aumentando la resiliencia del sistema. |
+| **Exponential Backoff (Retry)** | `BusinessUnitSubscriber` implementa reconexión automática con espera exponencial ante fallos de conexión con ActiveMQ, aumentando la resiliencia del sistema. Disponible como alternativa a `ActiveMQSubscriber`. |
 | **Batch Loader** | `EventStoreReader` carga en bloque todos los ficheros `.events` existentes al arrancar la business-unit, garantizando que el datamart refleja el histórico completo antes de servir peticiones. |
-| **State (clasificador)** | `EventWeatherState` encapsula la lógica de transición entre los estados `PRONOSTICO_CONFIRMADO`, `TENDENCIA_GENERAL` y `PREDICCION_HISTORICA` según la distancia temporal al evento, aislando las reglas de negocio de clasificación. |
+| **Utility / Strategy (clasificador)** | `EventWeatherState` es una clase utilitaria estática que aplica lógica condicional para clasificar el estado meteorológico (`PRONOSTICO_CONFIRMADO`, `TENDENCIA_GENERAL`, `PREDICCION_HISTORICA`) según la distancia en días al evento. |
 | **Facade** | `HistoricalWeatherService` actúa como fachada frente a la API Open-Meteo Archive, ocultando la complejidad de construcción de URLs, petición HTTP, parsing y cálculo de medias históricas. |
 
 ---
