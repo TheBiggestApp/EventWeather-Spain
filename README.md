@@ -178,13 +178,10 @@ El sistema sigue una **arquitectura dirigida por eventos (Event-Driven Architect
 └──────────────────────────────────────────────────────┘
 ```
 
-### Diagrama de Clases
+### Diagrama de Clases — openweather-module
 
 ```mermaid
 classDiagram
-
-%% ─── openweather-module ───────────────────────────────
-namespace openweather_module {
     class WeatherController {
         -OpenWeatherService weatherService
         -List~String~ ciudades
@@ -210,32 +207,37 @@ namespace openweather_module {
         +getFecha() String
         +getDesc() String
     }
-    class ActiveMQPublisher_OW {
+    class ActiveMQPublisher {
         -Connection connection
         -Session session
         -MessageProducer producer
         +publish(Event) void
         +close() void
     }
-    class DatabaseManager_OW {
+    class DatabaseManager {
         -Connection connection
         +guardar(Clima) void
     }
-    class Event_OW {
+    class Event {
         -String ts
         -String ss
         -JsonObject payload
         +toJson() String
     }
-}
-WeatherController --> OpenWeatherService : usa
-WeatherController --> ActiveMQPublisher_OW : publica
-WeatherController --> DatabaseManager_OW : persiste
-WeatherController --> Event_OW : crea
-OpenWeatherService --> Clima : devuelve
 
-%% ─── predicthq-module ────────────────────────────────
-namespace predicthq_module {
+    WeatherController --> OpenWeatherService
+    WeatherController --> ActiveMQPublisher
+    WeatherController --> DatabaseManager
+    WeatherController --> Event
+    OpenWeatherService --> Clima
+```
+
+---
+
+### Diagrama de Clases — predicthq-module
+
+```mermaid
+classDiagram
     class PredictHQController {
         -PredictHQService predictHQ
         +start() void
@@ -260,24 +262,29 @@ namespace predicthq_module {
         -double longitud
         -int impacto
     }
-    class ActiveMQPublisher_PHQ {
+    class ActiveMQPublisher {
         +publish(Event) void
         +close() void
     }
-    class Event_PHQ {
+    class Event {
         -String ts
         -String ss
         -JsonObject payload
         +toJson() String
     }
-}
-PredictHQController --> PredictHQService : usa
-PredictHQController --> ActiveMQPublisher_PHQ : publica
-PredictHQController --> Event_PHQ : crea
-PredictHQService --> EventoPHQ : devuelve
 
-%% ─── ticketmaster-module ────────────────────────────
-namespace ticketmaster_module {
+    PredictHQController --> PredictHQService
+    PredictHQController --> ActiveMQPublisher
+    PredictHQController --> Event
+    PredictHQService --> EventoPHQ
+```
+
+---
+
+### Diagrama de Clases — ticketmaster-module
+
+```mermaid
+classDiagram
     class TicketmasterController {
         -TicketmasterService ticketmaster
         -List~String~ ciudades
@@ -300,39 +307,50 @@ namespace ticketmaster_module {
         +getNombre() String
         +getFecha() String
     }
-    class ActiveMQPublisher_TM {
+    class ActiveMQPublisher {
         +publish(Event) void
         +close() void
     }
-    class Event_TM {
+    class Event {
         -String ts
         -String ss
         -JsonObject payload
         +toJson() String
     }
-}
-TicketmasterController --> TicketmasterService : usa
-TicketmasterController --> ActiveMQPublisher_TM : publica
-TicketmasterController --> Event_TM : crea
-TicketmasterService --> Evento : devuelve
 
-%% ─── event-store-builder ────────────────────────────
-namespace event_store_builder {
+    TicketmasterController --> TicketmasterService
+    TicketmasterController --> ActiveMQPublisher
+    TicketmasterController --> Event
+    TicketmasterService --> Evento
+```
+
+---
+
+### Diagrama de Clases — event-store-builder
+
+```mermaid
+classDiagram
     class EventStoreSubscriber {
         -EventStore eventStore
+        -String CLIENT_ID
         +start() void
     }
     class EventStore {
         -String BASE_DIR
         +store(String topic, String rawJson) void
     }
-}
-EventStoreSubscriber --> EventStore : usa
 
-%% ─── business-unit ──────────────────────────────────
-namespace business_unit {
+    EventStoreSubscriber --> EventStore
+```
+
+---
+
+### Diagrama de Clases — business-unit
+
+```mermaid
+classDiagram
     class DatamartDB {
-        -static DatamartDB instance
+        -DatamartDB instance
         -Connection connection
         +getInstance() DatamartDB
         +upsertWeather(WeatherRecord) void
@@ -347,15 +365,14 @@ namespace business_unit {
     class EventParser {
         -DatamartDB datamart
         -CityResolver cityResolver
-        +process(String rawJson, String topic) void
-        -routeEvent(JsonObject, String, String) void
+        +process(String, String) void
         -processWeather(JsonObject) void
         -processPredictHQ(JsonObject) void
         -processTicketmaster(JsonObject) void
     }
     class CityResolver {
         -Map~String,double[]~ cities
-        +resolve(double lat, double lon) String
+        +resolve(double, double) String
     }
     class WeatherRecord {
         +String ciudad
@@ -388,8 +405,6 @@ namespace business_unit {
         +String fecha
         +String hora
         +String ciudad
-        +String venue
-        +String url
         +String ss
     }
     class EventStoreReader {
@@ -425,24 +440,24 @@ namespace business_unit {
         +getCoordsForCity(String) double[]
     }
     class EventWeatherState {
-        +calcular(String fechaInicio) String
+        +calcular(String) String
     }
-}
-EventParser --> DatamartDB : usa
-EventParser --> CityResolver : usa
-EventParser --> WeatherRecord : crea
-EventParser --> PredictHQRecord : crea
-EventParser --> TicketmasterRecord : crea
-DatamartDB --> WeatherRecord : persiste
-DatamartDB --> PredictHQRecord : persiste
-DatamartDB --> TicketmasterRecord : persiste
-EventStoreReader --> EventParser : usa
-ActiveMQSubscriber --> EventParser : usa
-BusinessUnitSubscriber --> EventParser : usa
-RestApi --> DatamartDB : consulta
-RestApi --> HistoricalWeatherService : usa
-RestApi --> EventWeatherState : usa
-RestApi --> ResultSetMapper : usa
+
+    EventParser --> DatamartDB
+    EventParser --> CityResolver
+    EventParser --> WeatherRecord
+    EventParser --> PredictHQRecord
+    EventParser --> TicketmasterRecord
+    DatamartDB --> WeatherRecord
+    DatamartDB --> PredictHQRecord
+    DatamartDB --> TicketmasterRecord
+    EventStoreReader --> EventParser
+    ActiveMQSubscriber --> EventParser
+    BusinessUnitSubscriber --> EventParser
+    RestApi --> DatamartDB
+    RestApi --> HistoricalWeatherService
+    RestApi --> EventWeatherState
+    RestApi --> ResultSetMapper
 ```
 
 ### Flujo de Datos
