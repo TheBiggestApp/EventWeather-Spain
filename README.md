@@ -352,17 +352,20 @@ classDiagram
     class Main {
         +main(String[]) void
     }
-    class EventStoreReader {
-        -EventParser eventParser
-        +loadAll() void
+    class RestApi {
+        -DatamartDB db
+        -HistoricalWeatherService historicalWeather
+        +start() void
+        +stop() void
     }
     class ActiveMQSubscriber {
         -EventParser eventParser
         +startListening() void
+        +stopListening() void
     }
-    class BusinessUnitSubscriber {
+    class EventStoreReader {
         -EventParser eventParser
-        +start() void
+        +loadAll() void
     }
     class EventParser {
         -DatamartDB datamart
@@ -371,52 +374,41 @@ classDiagram
     }
     class DatamartDB {
         -DatamartDB instance
+        -Connection connection
         +getInstance() DatamartDB
         +upsertWeather(WeatherRecord) void
         +upsertPredictHQ(PredictHQRecord) void
         +upsertTicketmaster(TicketmasterRecord) void
         +findEventosConClima(String, String) ResultSet
-    }
-    class CityResolver {
-        +resolve(double, double) String
-    }
-    class WeatherRecord {
-    }
-    class PredictHQRecord {
-    }
-    class TicketmasterRecord {
-    }
-    class RestApi {
-        -DatamartDB db
-        -HistoricalWeatherService historicalWeather
-        +start() void
-    }
-    class ResultSetMapper {
-        +toList(ResultSet) List~Map~
+        +findLatLonForEvent(String, String) double[]
     }
     class HistoricalWeatherService {
+        -Map~String,double[]~ CITY_COORDS
         +getEstimacion(double, double, String) Map
         +getCoordsForCity(String) double[]
     }
     class EventWeatherState {
         +calcular(String) String
     }
+    class CityResolver {
+        -Map~String,double[]~ cities
+        +resolve(double, double) String
+    }
+    class ResultSetMapper {
+        +toList(ResultSet) List~Map~
+    }
 
-    Main --> EventStoreReader
     Main --> RestApi
     Main --> ActiveMQSubscriber
-    EventStoreReader --> EventParser
-    ActiveMQSubscriber --> EventParser
-    BusinessUnitSubscriber --> EventParser
-    EventParser --> DatamartDB
-    EventParser --> CityResolver
-    EventParser --> WeatherRecord
-    EventParser --> PredictHQRecord
-    EventParser --> TicketmasterRecord
+    Main --> EventStoreReader
     RestApi --> DatamartDB
     RestApi --> HistoricalWeatherService
     RestApi --> EventWeatherState
     RestApi --> ResultSetMapper
+    ActiveMQSubscriber --> EventParser
+    EventStoreReader --> EventParser
+    EventParser --> DatamartDB
+    EventParser --> CityResolver
 ```
 
 ### Flujo de Datos
