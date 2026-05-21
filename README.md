@@ -178,6 +178,273 @@ El sistema sigue una **arquitectura dirigida por eventos (Event-Driven Architect
 └──────────────────────────────────────────────────────┘
 ```
 
+### Diagrama de Clases
+
+```mermaid
+classDiagram
+
+%% ─── openweather-module ───────────────────────────────
+namespace openweather_module {
+    class WeatherController {
+        -OpenWeatherService weatherService
+        -List~String~ ciudades
+        +start() void
+        -captureAndPublish() void
+        -buildEvent(Clima) Event
+    }
+    class OpenWeatherService {
+        -OkHttpClient client
+        -String key
+        +getForecastPorCiudad(String) List~Clima~
+    }
+    class Clima {
+        -String ciudad
+        -String fecha
+        -double temp
+        -double tempMin
+        -double tempMax
+        -String desc
+        -int humidity
+        -double windSpeed
+        +getCiudad() String
+        +getFecha() String
+        +getDesc() String
+    }
+    class ActiveMQPublisher_OW {
+        -Connection connection
+        -Session session
+        -MessageProducer producer
+        +publish(Event) void
+        +close() void
+    }
+    class DatabaseManager_OW {
+        -Connection connection
+        +guardar(Clima) void
+    }
+    class Event_OW {
+        -String ts
+        -String ss
+        -JsonObject payload
+        +toJson() String
+    }
+}
+WeatherController --> OpenWeatherService : usa
+WeatherController --> ActiveMQPublisher_OW : publica
+WeatherController --> DatabaseManager_OW : persiste
+WeatherController --> Event_OW : crea
+OpenWeatherService --> Clima : devuelve
+
+%% ─── predicthq-module ────────────────────────────────
+namespace predicthq_module {
+    class PredictHQController {
+        -PredictHQService predictHQ
+        +start() void
+        -captureAndPublish() void
+        -buildEvent(EventoPHQ, String) Event
+    }
+    class PredictHQService {
+        -OkHttpClient client
+        -String token
+        -Map~String,double[]~ cityCoords
+        +getCities() List~String~
+        +fetchEventsJson(String) String
+        +parseToEventoPHQ(JsonObject) EventoPHQ
+    }
+    class EventoPHQ {
+        -String id
+        -String titulo
+        -String categoria
+        -String fechaInicio
+        -String fechaFin
+        -double latitud
+        -double longitud
+        -int impacto
+    }
+    class ActiveMQPublisher_PHQ {
+        +publish(Event) void
+        +close() void
+    }
+    class Event_PHQ {
+        -String ts
+        -String ss
+        -JsonObject payload
+        +toJson() String
+    }
+}
+PredictHQController --> PredictHQService : usa
+PredictHQController --> ActiveMQPublisher_PHQ : publica
+PredictHQController --> Event_PHQ : crea
+PredictHQService --> EventoPHQ : devuelve
+
+%% ─── ticketmaster-module ────────────────────────────
+namespace ticketmaster_module {
+    class TicketmasterController {
+        -TicketmasterService ticketmaster
+        -List~String~ ciudades
+        +start() void
+        -captureAndPublish() void
+        -buildEvent(Evento, String) Event
+    }
+    class TicketmasterService {
+        -OkHttpClient client
+        -String apiKey
+        +fetchEventsJson(String) String
+        +parseToEvento(JsonObject) Evento
+    }
+    class Evento {
+        -String id
+        -String nombre
+        -String fecha
+        -String hora
+        +getId() String
+        +getNombre() String
+        +getFecha() String
+    }
+    class ActiveMQPublisher_TM {
+        +publish(Event) void
+        +close() void
+    }
+    class Event_TM {
+        -String ts
+        -String ss
+        -JsonObject payload
+        +toJson() String
+    }
+}
+TicketmasterController --> TicketmasterService : usa
+TicketmasterController --> ActiveMQPublisher_TM : publica
+TicketmasterController --> Event_TM : crea
+TicketmasterService --> Evento : devuelve
+
+%% ─── event-store-builder ────────────────────────────
+namespace event_store_builder {
+    class EventStoreSubscriber {
+        -EventStore eventStore
+        +start() void
+    }
+    class EventStore {
+        -String BASE_DIR
+        +store(String topic, String rawJson) void
+    }
+}
+EventStoreSubscriber --> EventStore : usa
+
+%% ─── business-unit ──────────────────────────────────
+namespace business_unit {
+    class DatamartDB {
+        -static DatamartDB instance
+        -Connection connection
+        +getInstance() DatamartDB
+        +upsertWeather(WeatherRecord) void
+        +upsertPredictHQ(PredictHQRecord) void
+        +upsertTicketmaster(TicketmasterRecord) void
+        +findAllWeather() ResultSet
+        +findWeatherByCiudad(String) ResultSet
+        +findEventosConClima(String, String) ResultSet
+        +findTopCiudades(int) ResultSet
+        +findLatLonForEvent(String, String) double[]
+    }
+    class EventParser {
+        -DatamartDB datamart
+        -CityResolver cityResolver
+        +process(String rawJson, String topic) void
+        -routeEvent(JsonObject, String, String) void
+        -processWeather(JsonObject) void
+        -processPredictHQ(JsonObject) void
+        -processTicketmaster(JsonObject) void
+    }
+    class CityResolver {
+        -Map~String,double[]~ cities
+        +resolve(double lat, double lon) String
+    }
+    class WeatherRecord {
+        +String ciudad
+        +String ts
+        +double temp
+        +double tempMin
+        +double tempMax
+        +String descripcion
+        +int humidity
+        +double windSpeed
+        +String ss
+    }
+    class PredictHQRecord {
+        +String id
+        +String ts
+        +String titulo
+        +String categoria
+        +String ciudad
+        +String fechaInicio
+        +String fechaFin
+        +double latitud
+        +double longitud
+        +int impacto
+        +String ss
+    }
+    class TicketmasterRecord {
+        +String id
+        +String ts
+        +String nombre
+        +String fecha
+        +String hora
+        +String ciudad
+        +String venue
+        +String url
+        +String ss
+    }
+    class EventStoreReader {
+        -Path eventStorePath
+        -EventParser eventParser
+        +loadAll() void
+    }
+    class ActiveMQSubscriber {
+        -EventParser eventParser
+        +startListening() void
+        +stopListening() void
+    }
+    class BusinessUnitSubscriber {
+        -EventParser eventParser
+        -int INITIAL_RETRY_MS
+        -int MAX_RETRY_MS
+        +start() void
+        -connectWithRetry() void
+    }
+    class RestApi {
+        -DatamartDB db
+        -HistoricalWeatherService historicalWeather
+        +start() void
+        +stop() void
+    }
+    class ResultSetMapper {
+        +toList(ResultSet) List~Map~
+    }
+    class HistoricalWeatherService {
+        -Map~String,double[]~ CITY_COORDS
+        -HttpClient http
+        +getEstimacion(double, double, String) Map
+        +getCoordsForCity(String) double[]
+    }
+    class EventWeatherState {
+        +calcular(String fechaInicio) String
+    }
+}
+EventParser --> DatamartDB : usa
+EventParser --> CityResolver : usa
+EventParser --> WeatherRecord : crea
+EventParser --> PredictHQRecord : crea
+EventParser --> TicketmasterRecord : crea
+DatamartDB --> WeatherRecord : persiste
+DatamartDB --> PredictHQRecord : persiste
+DatamartDB --> TicketmasterRecord : persiste
+EventStoreReader --> EventParser : usa
+ActiveMQSubscriber --> EventParser : usa
+BusinessUnitSubscriber --> EventParser : usa
+RestApi --> DatamartDB : consulta
+RestApi --> HistoricalWeatherService : usa
+RestApi --> EventWeatherState : usa
+RestApi --> ResultSetMapper : usa
+```
+
 ### Flujo de Datos
 
 ```
@@ -680,6 +947,16 @@ Sevilla=37.3891,-5.9845,30
 ---
 
 ## Principios y Patrones de Diseño
+
+### Principios SOLID Aplicados
+
+| Principio | Descripción | Dónde se aplica |
+|-----------|-------------|-----------------|
+| **Single Responsibility (SRP)** | Cada clase tiene una única razón para cambiar. `OpenWeatherService` solo sabe llamar a la API. `WeatherController` solo sabe cuándo y cómo orquestar la captura. `ActiveMQPublisher` solo sabe publicar. `DatamartDB` solo sabe persistir y consultar. | Todos los módulos |
+| **Open/Closed (OCP)** | El sistema está abierto a extensión pero cerrado a modificación. `EventParser` puede recibir una nueva fuente añadiendo un nuevo caso al router sin modificar el código existente. `cities.properties` permite añadir ciudades sin tocar ninguna clase. | `EventParser`, `cities.properties` |
+| **Dependency Inversion (DIP)** | Los módulos de alto nivel no dependen de los de bajo nivel directamente. Los feeders publican en ActiveMQ sin saber quién consume. El business-unit consume sin saber quién produce. | Comunicación via ActiveMQ |
+
+---
 
 ### Patrones Arquitectónicos Globales
 
