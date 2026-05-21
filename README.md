@@ -349,93 +349,52 @@ classDiagram
 
 ```mermaid
 classDiagram
-    class DatamartDB {
-        -DatamartDB instance
-        -Connection connection
-        +getInstance() DatamartDB
-        +upsertWeather(WeatherRecord) void
-        +upsertPredictHQ(PredictHQRecord) void
-        +upsertTicketmaster(TicketmasterRecord) void
-        +findAllWeather() ResultSet
-        +findWeatherByCiudad(String) ResultSet
-        +findEventosConClima(String, String) ResultSet
-        +findTopCiudades(int) ResultSet
-        +findLatLonForEvent(String, String) double[]
-    }
-    class EventParser {
-        -DatamartDB datamart
-        -CityResolver cityResolver
-        +process(String, String) void
-        -processWeather(JsonObject) void
-        -processPredictHQ(JsonObject) void
-        -processTicketmaster(JsonObject) void
-    }
-    class CityResolver {
-        -Map~String,double[]~ cities
-        +resolve(double, double) String
-    }
-    class WeatherRecord {
-        +String ciudad
-        +String ts
-        +double temp
-        +double tempMin
-        +double tempMax
-        +String descripcion
-        +int humidity
-        +double windSpeed
-        +String ss
-    }
-    class PredictHQRecord {
-        +String id
-        +String ts
-        +String titulo
-        +String categoria
-        +String ciudad
-        +String fechaInicio
-        +String fechaFin
-        +double latitud
-        +double longitud
-        +int impacto
-        +String ss
-    }
-    class TicketmasterRecord {
-        +String id
-        +String ts
-        +String nombre
-        +String fecha
-        +String hora
-        +String ciudad
-        +String ss
+    class Main {
+        +main(String[]) void
     }
     class EventStoreReader {
-        -Path eventStorePath
         -EventParser eventParser
         +loadAll() void
     }
     class ActiveMQSubscriber {
         -EventParser eventParser
         +startListening() void
-        +stopListening() void
     }
     class BusinessUnitSubscriber {
         -EventParser eventParser
-        -int INITIAL_RETRY_MS
-        -int MAX_RETRY_MS
         +start() void
-        -connectWithRetry() void
+    }
+    class EventParser {
+        -DatamartDB datamart
+        -CityResolver cityResolver
+        +process(String, String) void
+    }
+    class DatamartDB {
+        -DatamartDB instance
+        +getInstance() DatamartDB
+        +upsertWeather(WeatherRecord) void
+        +upsertPredictHQ(PredictHQRecord) void
+        +upsertTicketmaster(TicketmasterRecord) void
+        +findEventosConClima(String, String) ResultSet
+    }
+    class CityResolver {
+        +resolve(double, double) String
+    }
+    class WeatherRecord {
+    }
+    class PredictHQRecord {
+    }
+    class TicketmasterRecord {
     }
     class RestApi {
         -DatamartDB db
         -HistoricalWeatherService historicalWeather
         +start() void
-        +stop() void
     }
     class ResultSetMapper {
         +toList(ResultSet) List~Map~
     }
     class HistoricalWeatherService {
-        -Map~String,double[]~ CITY_COORDS
-        -HttpClient http
         +getEstimacion(double, double, String) Map
         +getCoordsForCity(String) double[]
     }
@@ -443,17 +402,17 @@ classDiagram
         +calcular(String) String
     }
 
+    Main --> EventStoreReader
+    Main --> RestApi
+    Main --> ActiveMQSubscriber
+    EventStoreReader --> EventParser
+    ActiveMQSubscriber --> EventParser
+    BusinessUnitSubscriber --> EventParser
     EventParser --> DatamartDB
     EventParser --> CityResolver
     EventParser --> WeatherRecord
     EventParser --> PredictHQRecord
     EventParser --> TicketmasterRecord
-    DatamartDB --> WeatherRecord
-    DatamartDB --> PredictHQRecord
-    DatamartDB --> TicketmasterRecord
-    EventStoreReader --> EventParser
-    ActiveMQSubscriber --> EventParser
-    BusinessUnitSubscriber --> EventParser
     RestApi --> DatamartDB
     RestApi --> HistoricalWeatherService
     RestApi --> EventWeatherState
