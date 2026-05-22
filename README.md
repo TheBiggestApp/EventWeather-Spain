@@ -820,24 +820,7 @@ http://localhost:7070/api/analysis/events-with-weather?ciudad=Barcelona
 ]
 ```
 
-#### Eventos por categoría
 
-```
-http://localhost:7070/api/events/category/performing-arts
-```
-```json
-[
-  {
-    "id": "GjLLVbCw277VsLMCUi",
-    "ciudad": "Valencia",
-    "titulo": "MARIA & COSTEL | VALENCIA | STAND-UP COMEDY SHOW | 29.05.2026",
-    "categoria": "performing-arts",
-    "fecha_inicio": "2026-05-29T20:00:00",
-    "fecha_fin": "2026-05-29T20:00:00",
-    "impacto": 0
-  }
-]
-```
 
 ---
 
